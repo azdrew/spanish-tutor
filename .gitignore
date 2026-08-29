@@ -1,3 +1,10 @@
+.env
+spanish_words.json
+__pycache__/
+.streamlit/
+firebase-key.json
+
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[codz]
