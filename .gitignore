@@ -4,6 +4,19 @@ __pycache__/
 .streamlit/
 firebase-key.json
 
+# Ignore Google Drive desktop shortcuts
+*.gdoc
+*.gsheet
+*.gslides
+
+# Ignore secrets & local credentials
+credentials.json
+token.json
+
+# Ignore virtual environments
+spanish-tutor-env/
+.venv/
+
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
