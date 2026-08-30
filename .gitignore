@@ -17,6 +17,9 @@ token.json
 spanish-tutor-env/
 .venv/
 
+.DS_Store
+
+
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
@@ -104,7 +107,7 @@ ipython_config.py
 
 # pyenv
 #   For a library or package, you might want to ignore these files since the code is
-#   intended to run in multiple environments; otherwise, check them in:
+#   intended to run in multiple envir≠≤onments; otherwise, check them in:
 # .python-version
 
 # pipenv
