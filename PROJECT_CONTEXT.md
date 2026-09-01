@@ -23,9 +23,9 @@ All data is stored under the primary user reference:
 
 * **Base Reference:** `users/default_user/`
 * **Subcollection 1:** `words/` (Document ID = Spanish Word)
-    * Fields: `english`, `box` (1-5), `last_reviewed`, `next_review`, `image_url`[cite: 3]
+  * Fields: `english`, `box` (1-5), `last_reviewed`, `next_review`, `image_url`[cite: 3]
 * **Subcollection 2:** `chat_sessions/` (Document ID = Timestamp ID)
-    * Fields: `timestamp`, `title`, `messages` array
+  * Fields: `timestamp`, `title`, `messages` array
 
 ## 4. Tutor Personas & Operational Rules
 
@@ -51,3 +51,18 @@ The AI tutor behaves according to these core guidelines:
 * Dynamic Image Fetching: Queries Pexels API for thumbnail images on missing `image_url` fields and backfills Firestore.
 * Spoken "Say the Word" Challenges: Random audio interjections prompting the user to speak Spanish translations, evaluated directly by Gemini.
 * Pre-Made Decks Importer: One-click merging of starter topics (Numbers, Months, Body Parts) into Firestore.
+
+## Directory and Documentation structure
+
+```text
+spanish-tutor/                  # Root Git Repository[cite: 1]
+├── .env                        # Private API keys (Ignored by Git)
+├── .gitignore                  # Excludes secrets and local states
+├── PROJECT_CONTEXT.md          # Terse machine specs for Antigravity/Cline[cite: 1, 2]
+├── tutor.py                    # Primary Streamlit Python application[cite: 1]
+└── docs/                       # Developer Documentation Hub[cite: 1]
+    ├── PROJECT_NOTEBOOK.md     # Human-readable design history & goals
+    ├── snippets_catalog.md     # Curated repository of chat code snippets
+    ├── firebase_schema.md      # Firestore database collection layout
+    └── sprint_backlog.md       # Informal sprint cards & tasks
+```
