@@ -41,8 +41,8 @@ class AppConfig(BaseModel):
     """Application configuration schema."""
     app_name: str = "Spanish Tutor AI"
     version: str = "0.1.0"
-    model_name: str = "gemini-3.6-flash"
-    default_user_id: str = "default_user"
+    model_name: str = "gemini-3.7-flash"
+    fallback_models: list[str] = ["gemini-3.7-flash", "gemini-3.5-flash-lite"]
     base_firestore_path: str = "users/default_user"
 
 config = AppConfig()
@@ -156,7 +156,7 @@ def main():
 
     # Interactive Test Component
     st.subheader("🧪 Live Smoke Test")
-    st.write("Click below to test a live response from Gemini 2.5 Flash:")
+    st.write("Click below to test a live response from Gemini 3.7 Flash:")
     
     if st.button("💬 Ping Gemini Tutor", type="primary"):
         gemini_client = get_gemini_client()
@@ -164,14 +164,25 @@ def main():
             st.error("Cannot ping Gemini: GEMINI_API_KEY is not set.")
         else:
             with st.spinner("Gabriella is thinking..."):
-                try:
-                    response = gemini_client.models.generate_content(
-                        model=config.model_name,
-                        contents="Say hello in warm Latin American Spanish as tutor Gabriella and give a quick tip for learning Spanish today."
-                    )
-                    st.chat_message("assistant").write(response.text)
-                except Exception as e:
-                    st.error(f"Error communicating with Gemini: {e}")
+                response_text = None
+                last_error = None
+                for model_candidate in config.fallback_models:
+                    try:
+                        response = gemini_client.models.generate_content(
+                            model=model_candidate,
+                            contents="Say hello in warm Latin American Spanish as tutor Gabriella and give a quick tip for learning Spanish today."
+                        )
+                        response_text = response.text
+                        st.caption(f"⚡ Responded using `{model_candidate}`")
+                        break
+                    except Exception as e:
+                        last_error = e
+                        logger.warning(f"Model {model_candidate} unavailable: {e}. Trying fallback...")
+                
+                if response_text:
+                    st.chat_message("assistant").write(response_text)
+                else:
+                    st.error(f"Error communicating with Gemini: {last_error}")
 
     # Sidebar Information
     with st.sidebar:

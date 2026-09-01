@@ -12,7 +12,7 @@ Here are the core objectives for the application:
 
 The project relies on these core libraries and cloud services:
 
-* **SDK Package:** `google-genai` (Connecting to `gemini-3.6-flash`)[cite: 1, 3, 4].
+* **SDK Package:** `google-genai` (Connecting to `gemini-3.7-flash`)[cite: 1, 3, 4].
 * **UI Framework:** `streamlit` (Single-file web application in `tutor.py`)[cite: 1, 3, 4].
 * **Database / Cloud State:** Firebase Cloud Firestore (`google-cloud-firestore`) for real-time word banks and chat transcripts[cite: 1].
 * **Secret Credentials:** `GEMINI_API_KEY`, `PEXELS_API_KEY`, and `firebase-key.json` loaded securely via local configuration files (Strictly excluded via `.gitignore`)[cite: 1, 3].
