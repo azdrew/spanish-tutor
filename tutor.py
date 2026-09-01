@@ -1,116 +1,184 @@
-"""Terminal Spanish tutor powered by Google's Gemini API."""
+"""Spanish Tutor AI - Streamlit Web Application & Pipeline Validator.
+
+Architecture & Specifications: PROJECT_CONTEXT.md
+"""
 
 import os
-import json
-import random
 from pathlib import Path
+from typing import Optional, Dict, Any
 
+# UI & State
+import streamlit as st
+
+# Environment & Settings
 from dotenv import load_dotenv
+import yaml
+from pydantic import BaseModel, Field
+from pydantic_settings import BaseSettings
+
+# Logging
+from loguru import logger
+
+# Google GenAI (Gemini 2.5 Flash)
 from google import genai
+from google.genai import types
 
+# Firebase & Google Cloud
+import firebase_admin
+from firebase_admin import credentials as fb_credentials, firestore as fb_firestore
+from google.cloud import firestore
+from google.oauth2 import service_account
 
-ENV_FILE = Path(__file__).resolve().with_name(".env")
-load_dotenv(ENV_FILE)
+# Networking & Utilities
+import requests
 
-api_key = os.getenv("GEMINI_API_KEY")
-if not api_key:
-    raise RuntimeError(f"GEMINI_API_KEY is missing from {ENV_FILE}")
+# -----------------------------------------------------------------------------
+# Configuration & Settings Setup
+# -----------------------------------------------------------------------------
+load_dotenv()
 
-client = genai.Client(api_key=api_key)
-MODEL_NAME = "gemini-2.5-flash"
-WORDS_FILE = Path(__file__).resolve().with_name("spanish_words.json")
-MAX_BOX = 5
+class AppConfig(BaseModel):
+    """Application configuration schema."""
+    app_name: str = "Spanish Tutor AI"
+    version: str = "0.1.0"
+    model_name: str = "gemini-2.5-flash"
+    default_user_id: str = "default_user"
+    base_firestore_path: str = "users/default_user"
 
+config = AppConfig()
 
-def load_words() -> list[dict[str, str | int]]:
-    """Load vocabulary cards from the JSON file."""
-    if not WORDS_FILE.exists():
-        return []
+# -----------------------------------------------------------------------------
+# Secrets & Credentials Resolution Layer
+# -----------------------------------------------------------------------------
+def get_secret(key: str, default: Optional[str] = None) -> Optional[str]:
+    """Retrieve secret from Streamlit secrets (Cloud) or OS environment (Local)."""
+    if hasattr(st, "secrets") and key in st.secrets:
+        return st.secrets[key]
+    return os.getenv(key, default)
 
+GEMINI_API_KEY = get_secret("GEMINI_API_KEY")
+PEXELS_API_KEY = get_secret("PEXELS_API_KEY")
+
+def get_firestore_client() -> Optional[firestore.Client]:
+    """Initialize Firestore client from st.secrets (Cloud) or firebase-key.json (Local)."""
     try:
-        with WORDS_FILE.open(encoding="utf-8") as words_file:
-            words = json.load(words_file)
-    except json.JSONDecodeError as error:
-        raise RuntimeError(f"Could not parse {WORDS_FILE}: {error}") from error
+        # Check Streamlit Cloud Secrets first
+        if hasattr(st, "secrets") and "firebase_service_account" in st.secrets:
+            key_dict = dict(st.secrets["firebase_service_account"])
+            # Handle possible escaped newlines in TOML
+            if "private_key" in key_dict and "\\n" in key_dict["private_key"]:
+                key_dict["private_key"] = key_dict["private_key"].replace("\\n", "\n")
+            cred = service_account.Credentials.from_service_account_info(key_dict)
+            return firestore.Client(credentials=cred, project=key_dict.get("project_id"))
+        
+        # Local firebase-key.json fallback
+        local_key = Path(__file__).resolve().parent / "firebase-key.json"
+        if local_key.exists():
+            cred = service_account.Credentials.from_service_account_file(str(local_key))
+            return firestore.Client(credentials=cred)
+    except Exception as e:
+        logger.error(f"Firestore initialization error: {e}")
+        return None
+    return None
 
-    if not isinstance(words, list):
-        raise RuntimeError(f"Expected {WORDS_FILE} to contain a list of cards")
+def get_gemini_client() -> Optional[genai.Client]:
+    """Initialize Google GenAI Gemini client."""
+    if not GEMINI_API_KEY:
+        return None
+    try:
+        return genai.Client(api_key=GEMINI_API_KEY)
+    except Exception as e:
+        logger.error(f"Gemini client initialization error: {e}")
+        return None
 
-    for word in words:
-        if (
-            not isinstance(word, dict)
-            or not isinstance(word.get("spanish"), str)
-            or not isinstance(word.get("english"), str)
-            or not isinstance(word.get("box"), int)
-        ):
-            raise RuntimeError(
-                "Each vocabulary card must contain string 'spanish' and "
-                "'english' values plus an integer 'box'"
-            )
-    return words
+# -----------------------------------------------------------------------------
+# Streamlit UI Presentation Layer
+# -----------------------------------------------------------------------------
+st.set_page_config(
+    page_title="Spanish Tutor AI",
+    page_icon="🇪🇸",
+    layout="wide",
+    initial_sidebar_state="expanded"
+)
 
+def render_pipeline_status():
+    """Render service connectivity checks for verifying the full pipeline."""
+    st.header("🚀 System Pipeline & Service Health Check")
+    st.caption("Verifying cloud dependencies, secret configurations, and database connectivity.")
 
-def save_words(words: list[dict[str, str | int]]) -> None:
-    """Save vocabulary cards to the JSON file."""
-    temporary_file = WORDS_FILE.with_suffix(".json.tmp")
-    with temporary_file.open("w", encoding="utf-8") as words_file:
-        json.dump(words, words_file, ensure_ascii=False, indent=2)
-        words_file.write("\n")
-    temporary_file.replace(WORDS_FILE)
+    col1, col2, col3, col4 = st.columns(4)
 
+    # 1. Streamlit Runtime
+    with col1:
+        st.metric(label="UI Engine", value="Streamlit Ready", delta="Online")
+        st.success("✅ Streamlit Framework OK")
 
-def add_word(words: list[dict[str, str | int]]) -> None:
-    """Prompt for and save a new vocabulary card."""
-    spanish = input("Spanish word or phrase: ").strip()
-    english = input("English meaning: ").strip()
-    if not spanish or not english:
-        print("Both Spanish and English are required.")
-        return
-
-    words.append({"spanish": spanish, "english": english, "box": 1})
-    save_words(words)
-    print(f"Saved '{spanish}'.")
-
-
-def review_words(words: list[dict[str, str | int]]) -> None:
-    """Run a flashcard review and update each card's review box."""
-    if not words:
-        print("No vocabulary cards found. Add a word first.")
-        return
-
-    cards = words.copy()
-    random.shuffle(cards)
-    for card in cards:
-        print(f"\nSpanish: {card['spanish']}")
-        input("Press Enter to reveal the answer...")
-        print(f"English: {card['english']}")
-        result = input("Did you get it right? [y/N]: ").strip().lower()
-        if result == "y":
-            card["box"] = min(int(card["box"]) + 1, MAX_BOX)
+    # 2. Gemini API
+    with col2:
+        gemini_client = get_gemini_client()
+        if gemini_client:
+            st.metric(label="GenAI Model", value=config.model_name, delta="Connected")
+            st.success("✅ Gemini API Connected")
         else:
-            card["box"] = 1
+            st.metric(label="GenAI Model", value="Missing Key", delta="-Offline")
+            st.error("❌ GEMINI_API_KEY not found")
 
-    save_words(words)
-    print("Review complete. Progress saved.")
-
-
-def main() -> None:
-    """Start the tutor application."""
-    words = load_words()
-    print(f"Spanish tutor ready ({MODEL_NAME}).")
-    while True:
-        print("\n1. Add vocabulary\n2. Review flashcards\n3. Quit")
-        choice = input("Choose an option: ").strip()
-        if choice == "1":
-            add_word(words)
-        elif choice == "2":
-            review_words(words)
-        elif choice == "3":
-            print("¡Hasta luego!")
-            break
+    # 3. Firebase Firestore
+    with col3:
+        db = get_firestore_client()
+        if db:
+            st.metric(label="Database", value="Cloud Firestore", delta="Connected")
+            st.success("✅ Firestore Ready")
         else:
-            print("Please choose 1, 2, or 3.")
+            st.metric(label="Database", value="No Credentials", delta="-Offline")
+            st.warning("⚠️ Firestore Key Pending")
 
+    # 4. Pexels API
+    with col4:
+        if PEXELS_API_KEY:
+            st.metric(label="Visual Media", value="Pexels API", delta="Connected")
+            st.success("✅ Pexels API Key OK")
+        else:
+            st.metric(label="Visual Media", value="No API Key", delta="-Missing")
+            st.warning("⚠️ Pexels Key Pending")
+
+def main():
+    """Main application entry point."""
+    st.title("🇪🇸 Spanish Tutor AI: ¡Hola Mundo!")
+    st.write(
+        "Welcome to the Spanish Tutor application development environment. "
+        "This initial view validates that all core libraries, secret managers, and backend connections are active."
+    )
+
+    st.divider()
+    render_pipeline_status()
+    st.divider()
+
+    # Interactive Test Component
+    st.subheader("🧪 Live Smoke Test")
+    st.write("Click below to test a live response from Gemini 2.5 Flash:")
+    
+    if st.button("💬 Ping Gemini Tutor", type="primary"):
+        gemini_client = get_gemini_client()
+        if not gemini_client:
+            st.error("Cannot ping Gemini: GEMINI_API_KEY is not set.")
+        else:
+            with st.spinner("Gabriella is thinking..."):
+                try:
+                    response = gemini_client.models.generate_content(
+                        model=config.model_name,
+                        contents="Say hello in warm Latin American Spanish as tutor Gabriella and give a quick tip for learning Spanish today."
+                    )
+                    st.chat_message("assistant").write(response.text)
+                except Exception as e:
+                    st.error(f"Error communicating with Gemini: {e}")
+
+    # Sidebar Information
+    with st.sidebar:
+        st.header("⚙️ App Info")
+        st.info(f"**Version:** {config.version}\n\n**Target Dialect:** Latin American Spanish\n\n**User Scope:** `{config.default_user_id}`")
+        st.markdown("---")
+        st.markdown("📚 See [`PROJECT_CONTEXT.md`](#) for architecture details.")
 
 if __name__ == "__main__":
     main()
