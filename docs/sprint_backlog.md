@@ -42,7 +42,7 @@ This backlog translates the master architecture from `PROJECT_CONTEXT.md` into a
   - Implement Gabriella "Gabby" (warm, primary) and Mateo (secondary) personas.
   - Enforce Latin American dialect, $r$ vs. $rr$ pronunciation corrections, and *por* vs. *para* preposition checks.
 - [ ] **Task 3.2: Push-to-Talk Voice Interface**
-  - Integrate `st.audio_input` with raw byte streaming to `gemini-2.5-flash`.
+  - Integrate `st.audio_input` with raw byte streaming to `gemini-3.6-flash`.
 - [ ] **Task 3.3: Spoken Tutor Audio (TTS)**
   - Generate and autoplay spoken audio responses for tutor dialogue.
 - [ ] **Task 3.4: Automated Vocabulary Capture**

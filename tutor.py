@@ -41,7 +41,7 @@ class AppConfig(BaseModel):
     """Application configuration schema."""
     app_name: str = "Spanish Tutor AI"
     version: str = "0.1.0"
-    model_name: str = "gemini-2.5-flash"
+    model_name: str = "gemini-3.6-flash"
     default_user_id: str = "default_user"
     base_firestore_path: str = "users/default_user"
 

@@ -34,7 +34,7 @@ st.audio_input (Voice)        * Leitner Box SRS (1–5)  Gemini 2.5 Flash API   
 ## 🛠️ Tech Stack & Dependencies
 
 * **Language & UI:** Python 3.x[cite: 5], [Streamlit](https://streamlit.io/)[cite: 1, 3, 4]
-* **LLM SDK:** `google-genai` (utilizing `gemini-2.5-flash`)[cite: 1, 3, 4]
+* **LLM SDK:** `google-genai` (utilizing `gemini-3.6-flash`)[cite: 1, 3, 4]
 * **Database:** Firebase Cloud Firestore (`google-cloud-firestore`)[cite: 1, 11]
 * **Configuration & Logging:** `pydantic-settings`, `pyyaml`, `loguru`
 * **External APIs:** Pexels API (for thumbnail fetching)[cite: 11]
