@@ -3,6 +3,8 @@ spanish_words.json
 __pycache__/
 .streamlit/
 firebase-key.json
+*.temp
+*.toml
 
 # Ignore Google Drive desktop shortcuts
 *.gdoc
