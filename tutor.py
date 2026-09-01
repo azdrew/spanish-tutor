@@ -43,6 +43,7 @@ class AppConfig(BaseModel):
     version: str = "0.1.0"
     model_name: str = "gemini-3.7-flash"
     fallback_models: list[str] = ["gemini-3.7-flash", "gemini-3.5-flash-lite"]
+    default_user_id: str = "default_user"
     base_firestore_path: str = "users/default_user"
 
 config = AppConfig()
