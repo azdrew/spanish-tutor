@@ -5,7 +5,7 @@ This backlog translates the master architecture from `PROJECT_CONTEXT.md` into a
 ---
 
 ## 🏃 Sprint 0: Foundation & Pipeline Validation
-- [ ] **Task 0.1: Initial `tutor.py` Setup & Pipeline Validation ("Hello World")**
+- [x] **Task 0.1: Initial `tutor.py` Setup & Pipeline Validation ("Hello World")**
   - Remove legacy CLI prototype code from `tutor.py`.
   - Add all required imports from `requirements.txt` (`streamlit`, `google-genai`, `google-cloud-firestore`, `firebase-admin`, `loguru`, `pydantic`, `pydantic-settings`, `pyyaml`, `requests`, `python-dotenv`).
   - Configure resilient secrets resolution (`st.secrets` with `.env` / `firebase-key.json` fallback).
