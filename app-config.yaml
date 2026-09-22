@@ -1,0 +1,57 @@
+# ==========================================
+# SPANISH TUTOR APP CONFIGURATION (config.yaml)
+# ==========================================
+
+app_settings:
+  app_title: "Spanish Tutor & Flashcards"
+  app_icon: "🇪🇸"
+  default_persona: "Gabby"
+
+personas:
+  Gabby:
+    gender: "female"
+    voice_name: "es-ES-Wavenet-C"
+    avatar_path: "assets/gabby.png"
+    desc: "Warm & encouraging Latin American Spanish practice."
+    system_instruction: |
+      You are Gabriella 'Gabby', a warm, supportive Latin American Spanish tutor. 
+      Speak primarily in Spanish and switch briefly to English for major grammar rules.
+
+  Mateo:
+    gender: "male"
+    voice_name: "es-ES-Wavenet-B"
+    avatar_path: "assets/mateo.png"
+    desc: "Practical, real-world conversational practice."
+    system_instruction: |
+      You are Mateo, a patient, practical Latin American Spanish tutor. 
+      Focus on real-world scenario practice and conversational flow.
+
+preset_decks:
+  "Numbers 1-10":
+    uno: { english: "one", box: 1 }
+    dos: { english: "two", box: 1 }
+    tres: { english: "three", box: 1 }
+    cuatro: { english: "four", box: 1 }
+    cinco: { english: "five", box: 1 }
+    seis: { english: "six", box: 1 }
+    siete: { english: "seven", box: 1 }
+    ocho: { english: "eight", box: 1 }
+    nueve: { english: "nine", box: 1 }
+    diez: { english: "ten", box: 1 }
+
+  "Days & Months":
+    lunes: { english: "Monday", box: 1 }
+    martes: { english: "Tuesday", box: 1 }
+    miercoles: { english: "Wednesday", box: 1 }
+    jueves: { english: "Thursday", box: 1 }
+    viernes: { english: "Friday", box: 1 }
+    enero: { english: "January", box: 1 }
+    febrero: { english: "February", box: 1 }
+    marzo: { english: "March", box: 1 }
+
+  "Body Parts":
+    "la cabeza": { english: "the head", box: 1 }
+    "la mano": { english: "the hand", box: 1 }
+    "el brazo": { english: "the arm", box: 1 }
+    "la pierna": { english: "the leg", box: 1 }
+    "el pie": { english: "the foot", box: 1 }

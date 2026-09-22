@@ -7,6 +7,7 @@ assignees: ["azdrew"]
 ---
 
 ### 🎯 Objective / User Story
+
 **As a** Spanish learner,
 **I want to** [describe desired functionality],
 **So that** [describe benefit or learning outcome].
@@ -19,6 +20,7 @@ assignees: ["azdrew"]
 ---
 
 ### ✅ Acceptance Criteria
+
 - [ ] Criterion 1
 - [ ] Criterion 2
 - [ ] Tested on desktop & mobile browser (Samsung Galaxy)

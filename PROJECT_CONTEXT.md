@@ -37,7 +37,9 @@ The AI tutor behaves according to these core guidelines:
 * **Automated Word Tracking:** Model appends hidden `[SAVE: spanish_word]` tags to responses when the user struggles; regex strips tags for display and updates Firestore[cite: 1, 3, 4].
 * **Silence Helper:** Offer 3 short text suggestions if the user is silent for 5 seconds[cite: 9].
 
-## 5. Visual UI Structure & Features (`tutor.py`)
+## 5. Visual UI Structure & Features (`tutor.py`) 
+
+To do: reference praktica
 
 ### Tab 1: 💬 Conversation Practice
 
@@ -54,15 +56,31 @@ The AI tutor behaves according to these core guidelines:
 
 ## Directory and Documentation structure
 
-```text
-spanish-tutor/                  # Root Git Repository[cite: 1]
-├── .env                        # Private API keys (Ignored by Git)
-├── .gitignore                  # Excludes secrets and local states
-├── PROJECT_CONTEXT.md          # Terse machine specs for Antigravity/Cline[cite: 1, 2]
-├── tutor.py                    # Primary Streamlit Python application[cite: 1]
-└── docs/                       # Developer Documentation Hub[cite: 1]
-    ├── PROJECT_NOTEBOOK.md     # Human-readable design history & goals
-    ├── snippets_catalog.md     # Curated repository of chat code snippets
-    ├── firebase_schema.md      # Firestore database collection layout
-    └── sprint_backlog.md       # Informal sprint cards & tasks
+```mermaid
+flowchart TB
+    root["📁 spanish-tutor/ (Root Repo)"]
+
+    subgraph Config_Files ["⚙️ Config"]
+        env["📄 .env"]
+        git["📄 .gitignore"]
+    end
+
+    subgraph Docs_Folder ["📁 docs/"]
+        schema["🔥 firebase_schema.md"]
+        backlog["📋 sprint_backlog.md"]
+    end
+
+    root --- Config_Files & Docs_Folder
+
+    %% --- STYLING REGION ---
+    %% Style the Root Node
+    style root fill:#e1f5fe,stroke:#0288d1,stroke-width:2px
+    
+    %% Style the Config Subgraph (Dashed Gray)
+    style Config_Files fill:#fafafa,stroke:#9e9e9e,stroke-dasharray: 5 5,rx:8px,ry:8px
+
+    %% Style the Docs Subgraph (Soft Yellow with thick yellow border)
+    style Docs_Folder fill:#fffde7,stroke:#fbc02d,stroke-width:2px,rx:12px,ry:12px
 ```
+
+
