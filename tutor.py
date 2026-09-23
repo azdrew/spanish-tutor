@@ -362,35 +362,44 @@ FEEDBACK RIGOR: {feedback_style}
                 user_content_part = user_input
                 st.session_state.messages.append({"role": "user", "content": user_input})
 
-            # Generate Tutor Response
+            # Generate Tutor Response with Real-Time Streaming
             with st.chat_message("assistant", avatar=avatar_img):
-                with st.spinner(f"{st.session_state.selected_persona} está escuchando y pensando..."):
-                    raw_response = None
-                    last_err = None
-                    for model_cand in config.fallback_models:
-                        try:
-                            res = gemini_client.models.generate_content(
-                                model=model_cand,
-                                contents=user_content_part,
-                                config=types.GenerateContentConfig(
-                                    system_instruction=system_instruction
-                                )
-                            )
-                            raw_response = res.text
-                            break
-                        except Exception as e:
-                            last_err = e
-                            logger.warning(f"Model {model_cand} error: {e}. Trying fallback...")
-                    
-                    if raw_response:
-                        clean_text = parse_and_save_vocabulary(raw_response)
-                        st.markdown(clean_text)
-                        st.session_state.messages.append({
-                            "role": "assistant",
-                            "content": clean_text
-                        })
-                    else:
-                        st.error(f"Error communicating with Gemini: {last_err}")
+                raw_response = None
+                last_err = None
+                
+                def create_stream(cand_model):
+                    return gemini_client.models.generate_content_stream(
+                        model=cand_model,
+                        contents=user_content_part,
+                        config=types.GenerateContentConfig(
+                            system_instruction=system_instruction,
+                            max_output_tokens=300,
+                            temperature=0.7
+                        )
+                    )
+
+                for model_cand in config.fallback_models:
+                    try:
+                        def chunk_gen(model_name):
+                            for chunk in create_stream(model_name):
+                                if chunk.text:
+                                    yield chunk.text
+
+                        # Stream tokens to UI in real time
+                        raw_response = st.write_stream(chunk_gen(model_cand))
+                        break
+                    except Exception as e:
+                        last_err = e
+                        logger.warning(f"Model {model_cand} stream error: {e}. Trying fallback...")
+                
+                if raw_response:
+                    clean_text = parse_and_save_vocabulary(raw_response)
+                    st.session_state.messages.append({
+                        "role": "assistant",
+                        "content": clean_text
+                    })
+                else:
+                    st.error(f"Error communicating with Gemini: {last_err}")
 
 # =============================================================================
 # TAB 2: 🎴 Flashcard Deck (MVP Preview)
