@@ -11,7 +11,8 @@ personas:
   Gabby:
     gender: "female"
     voice_name: "es-ES-Wavenet-C"
-    avatar_path: "assets/gabby.png"
+    avatar_path: "assets/gabby.jpg"
+    banner_path: "assets/gabby-banner.jpg"
     desc: "Warm & encouraging Latin American Spanish practice."
     system_instruction: |
       You are Gabriella 'Gabby', a warm, supportive Latin American Spanish tutor. 
@@ -20,7 +21,8 @@ personas:
   Mateo:
     gender: "male"
     voice_name: "es-ES-Wavenet-B"
-    avatar_path: "assets/mateo.png"
+    avatar_path: "assets/mateo.jpg"
+    banner_path: "assets/mateo-banner.jpg"
     desc: "Practical, real-world conversational practice."
     system_instruction: |
       You are Mateo, a patient, practical Latin American Spanish tutor. 

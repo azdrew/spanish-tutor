@@ -1,64 +1,37 @@
 # SPANISH TUTOR: SPRINT BACKLOG & ROADMAP
 
-This backlog translates the master architecture from `PROJECT_CONTEXT.md` and `PROJECT_DESIGN.md` into actionable sprint deliverables.
+---
+
+## 🎯 [ ] CHECKPOINT 1: First Publish on Streamlit Cloud
+**Goal:** Prove the end-to-end pipeline works (Mac -> GitHub -> Streamlit Cloud) with a clean connection to Firestore and Gemini before adding complex UI.
+
+* [x] Remove legacy CLI prototype code from `tutor.py`[cite: 11].
+* [x] Add all required imports from `requirements.txt` (`streamlit`, `google-genai`, `google-cloud-firestore`, `pyyaml`, `loguru`)[cite: 11].
+* [x] Configure resilient secrets resolution (`st.secrets` with `.env` / `firebase-key.json` fallback)[cite: 11].
+* [ ] Deploy to Streamlit Community Cloud and verify the initial UI loads successfully on a mobile browser[cite: 11].
 
 ---
 
-## 0 🏃 Foundation & Pipeline Validation
-  - Remove legacy CLI prototype code from `tutor.py`.
-  - Add all required imports from `requirements.txt` (`streamlit`, `google-genai`, `google-cloud-firestore`, `firebase-admin`, `loguru`, `pydantic`, `pydantic-settings`, `pyyaml`, `requests`, `python-dotenv`).
-  - Configure resilient secrets resolution (`st.secrets` with `.env` / `firebase-key.json` fallback).
-  - Add initial Streamlit "Hello World" UI with interactive service health check indicators (Streamlit, Gemini API, Firestore, Pexels) to validate the end-to-end deployment pipeline.
+## 🎯 [ ] CHECKPOINT 2: The MVP (Minimum Viable Product)
+**Goal:** Deliver the core value proposition—talking to Gabby and saving words to a spaced repetition deck—using the Praktika-inspired layout.
+
+* [x] Create `config.yaml` to store `personas` (Gabby/Mateo) and `preset_decks` starter datasets[cite: 10, 11].
+* [ ] Build Tab 1 ("💬 Practice") with the compact 16:9 tutor banner (`st.columns`), avatar chat feed, and `st.audio_input` push-to-talk widget[cite: 9, 10, 11].
+* [ ] Integrate Gemini 3.7 Flash API to process raw audio bytes/text and return conversational Spanish responses[cite: 9, 11].
+* [ ] Implement automated vocabulary capture: parse `[SAVE: spanish_word]` tags via regex and upsert to Firestore `words/` subcollection[cite: 9, 11].
+* [ ] Add inline spoken tutor TTS audio playback (🔊 Play Audio) and translation toggle (🈳 Translate) to chat bubbles[cite: 9, 10].
+* [ ] Build Tab 2 ("🎴 Flashcards") with basic Leitner Box logic, filtering words due today (`next_review <= today`), and response controls ([Got It], [Wrong], [Pass])[cite: 9, 11].
 
 ---
 
-## 5🏃 Cloud Architecture & State Management
-- [ ] **Task 1.1: Firebase Firestore Connection Layer**
-  - Implement dynamic credential resolver (`st.secrets` for Streamlit Cloud + local `firebase-key.json` fallback).
-  - Initialize Firestore client and create helper methods for user document reference (`users/default_user/`).
-- [ ] **Task 1.2: Multi-Environment Secrets Configuration**
-  - Verify `.streamlit/secrets.toml` and `.env` loading for `GEMINI_API_KEY`, `PEXELS_API_KEY`, and service account.
-- [ ] **Task 1.3: Document Schema Specs**
-  - Detail schema models in `docs/firebase_schema.md`.
+## 🎯 [ ] CHECKPOINT 3: V1 Finished and Published
+**Goal:** Polish the app into a fully-featured, cross-device experience ready for daily use and external testers.
 
----
-
-## 2 🏃Initial implementation of PROJECT_DESIGN.md
-
-- [ ] **Task 2.1: Analyze PROJECT_DESIGN.md to determine overlap between following sprint items**
-- [ ] 
-## 3 🏃Spaced Repetition (SRS) Flashcard Engine
-- [ ] **Task 3.1: Leitner Box 1–5 Data Model & Scheduling**
-  - Query words due for review today (`next_review <= today`).
-  - Implement promotion (Box $N \to \min(N+1, 5)$) on success, and demotion (reset to Box 1) on incorrect.
-- [ ] **Task 3.2: Pexels API Thumbnail Visual Integrations**
-  - Fetch relevant visual context for vocabulary words missing `image_url` and persist back to Firestore.
-- [ ] **Task 3.3: Pre-Made Topic Decks Importer**
-  - Starter topic merging (Numbers, Months, Common Verbs, Body Parts) into Firestore `words/` subcollection.
-- [ ] **Task 3.4: Spoken "Say the Word" Audio Challenges**
-  - Interleaved spoken prompts requiring the user to translate aloud, evaluated via Gemini API.
-
----
-
-## 4 🏃 Conversational AI Tutor & Voice Interaction
-- [ ] **Task 4.1: Persona & Prompt Engineering**
-  - Implement Gabriella "Gabby" (warm, primary) and Mateo (secondary) personas.
-  - Enforce Latin American dialect, $r$ vs. $rr$ pronunciation corrections, and *por* vs. *para* preposition checks.
-- [ ] **Task 4.2: Push-to-Talk Voice Interface**
-  - Integrate `st.audio_input` with raw byte streaming to `gemini-3.7-flash`.
-- [ ] **Task 4.3: Spoken Tutor Audio (TTS)**
-  - Generate and autoplay spoken audio responses for tutor dialogue.
-- [ ] **Task 4.4: Automated Vocabulary Capture**
-  - Parse `[SAVE: spanish_word]` tags from model output with regex, strip tags for UI display, and upsert cards to Firestore.
-- [ ] **Task 4.5: 5-Second Silence Helper**
-  - Display 3 quick response suggestions if user hesitation is detected.
-
----
-
-## 5 🏃 Chat History & Cross-Device Polish
-- [ ] **Task 5.1: Chat Session Persistence**
-  - Save and load historical chat threads in Firestore subcollection `users/default_user/chat_sessions/`.
-  - Provide a collapsible sidebar history viewer.
-- [ ] **Task 5.2: Mobile Responsive Layout**
-  - Optimize UI for Samsung Galaxy browser & local Wi-Fi pairing.
-
+* [ ] Build offloaded `st.sidebar` controls for Persona Selection (Gabby/Mateo), Speech Speed, Feedback Rigor (Soft/Balanced/Strict), and Streak metrics[cite: 10, 11].
+* [ ] Implement Firestore persistence for `user_settings/config` (persona, feedback rigor, speech speed, streak days)[cite: 9, 10].
+* [ ] Implement `import_preset_deck()` function to load starter decks from `config.yaml` into Firestore without duplicates[cite: 10, 11].
+* [ ] Integrate Pexels API fetching for dynamic thumbnail image backfilling on missing flashcard images[cite: 9, 11].
+* [ ] Implement Spoken "Say the Word" audio challenges in Tab 2 using `st.audio_input` and Gemini evaluation[cite: 9, 11].
+* [ ] Save and load historical chat threads in Firestore subcollection `chat_sessions/`[cite: 9, 11].
+* [ ] Implement floating "💡 What to say?" hint chip with 5-second silence trigger[cite: 9, 10].
+* [ ] Final QA on Samsung Galaxy mobile browser to ensure full touch responsiveness and layout scaling[cite: 11, 22].
