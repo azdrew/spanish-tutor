@@ -2,13 +2,13 @@
 
 ---
 
-## 🎯 [ ] CHECKPOINT 1: First Publish on Streamlit Cloud
+## 🎯 [x] CHECKPOINT 1: First Publish on Streamlit Cloud
 **Goal:** Prove the end-to-end pipeline works (Mac -> GitHub -> Streamlit Cloud) with a clean connection to Firestore and Gemini before adding complex UI.
 
 * [x] Remove legacy CLI prototype code from `tutor.py`[cite: 11].
 * [x] Add all required imports from `requirements.txt` (`streamlit`, `google-genai`, `google-cloud-firestore`, `pyyaml`, `loguru`)[cite: 11].
 * [x] Configure resilient secrets resolution (`st.secrets` with `.env` / `firebase-key.json` fallback)[cite: 11].
-* [ ] Deploy to Streamlit Community Cloud and verify the initial UI loads successfully on a mobile browser[cite: 11].
+* [x] Deploy to Streamlit Community Cloud and verify the initial UI loads successfully on a mobile browser[cite: 11].
 
 ---
 
