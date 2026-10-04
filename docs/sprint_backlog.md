@@ -17,6 +17,7 @@
 * [x] Remove microphone emoji from Push to Talk widget to prevent tap target confusion.
 * [x] Add animated 3-dot messaging status indicator (•••) while Gabby is formulating a response.
 * [x] Position Push to Talk button cleanly at the bottom of the conversation feed to eliminate clutter.
+* [x] Add mobile virtual keyboard auto-scroll avoidance and bottom padding so text input is never obscured.
 
 ---
 
@@ -24,9 +25,9 @@
 **Goal:** Deliver the core value proposition—talking to Gabby and saving words to a spaced repetition deck—using the Praktika-inspired layout.
 
 * [x] Create `config.yaml` to store `personas` (Gabby/Mateo) and `preset_decks` starter datasets[cite: 10, 11].
-* [ ] Build Tab 1 ("💬 Practice") with the compact 16:9 tutor banner (`st.columns`), avatar chat feed, and `st.audio_input` push-to-talk widget[cite: 9, 10, 11].
-* [ ] Integrate Gemini 3.7 Flash API to process raw audio bytes/text and return conversational Spanish responses[cite: 9, 11].
-* [ ] Implement automated vocabulary capture: parse `[SAVE: spanish_word]` tags via regex and upsert to Firestore `words/` subcollection[cite: 9, 11].
+* [x] Build Tab 1 ("💬 Practice") with the compact 16:9 tutor banner (`st.columns`), avatar chat feed, and `st.audio_input` push-to-talk widget[cite: 9, 10, 11].
+* [x] Integrate Gemini 3.7 Flash API to process raw audio bytes/text and return conversational Spanish responses[cite: 9, 11].
+* [x] Implement automated vocabulary capture: parse `[SAVE: spanish_word]` tags via regex and upsert to Firestore `words/` subcollection[cite: 9, 11].
 * [ ] Add inline spoken tutor TTS audio playback (🔊 Play Audio) and translation toggle (🈳 Translate) to chat bubbles[cite: 9, 10].
 * [ ] Build Tab 2 ("🎴 Flashcards") with basic Leitner Box logic, filtering words due today (`next_review <= today`), and response controls ([Got It], [Wrong], [Pass])[cite: 9, 11].
 
