@@ -183,6 +183,38 @@ st.markdown("""
     .stChatMessage {
         border-radius: 12px;
     }
+    .typing-bubble {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 8px 14px;
+        background-color: rgba(124, 58, 237, 0.08);
+        border: 1px solid rgba(124, 58, 237, 0.18);
+        border-radius: 18px;
+        margin: 4px 0;
+        width: fit-content;
+    }
+    .typing-dot {
+        width: 7px;
+        height: 7px;
+        background-color: #7C3AED;
+        border-radius: 50%;
+        display: inline-block;
+        animation: typing-pulse 1.4s infinite ease-in-out both;
+    }
+    .typing-dot:nth-child(1) { animation-delay: -0.32s; }
+    .typing-dot:nth-child(2) { animation-delay: -0.16s; }
+    .typing-dot:nth-child(3) { animation-delay: 0s; }
+    @keyframes typing-pulse {
+        0%, 80%, 100% {
+            transform: scale(0.4);
+            opacity: 0.3;
+        }
+        40% {
+            transform: scale(1.0);
+            opacity: 1.0;
+        }
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -298,12 +330,15 @@ with tab_practice:
             "content": initial_greeting
         })
 
-    # 3. Chat History Feed
-    for msg in st.session_state.messages:
-        role = msg["role"]
-        avatar = avatar_img if role == "assistant" else None
-        with st.chat_message(role, avatar=avatar):
-            st.markdown(msg["content"])
+    # 3. Dedicated Chat Container (Keeps conversation clean & above inputs)
+    chat_container = st.container()
+
+    with chat_container:
+        for msg in st.session_state.messages:
+            role = msg["role"]
+            avatar = avatar_img if role == "assistant" else None
+            with st.chat_message(role, avatar=avatar):
+                st.markdown(msg["content"])
 
     # 4. Floating Suggestion / What to say chip
     with st.expander("💡 ¿No sabes qué decir? Sugerencias rápidas"):
@@ -315,8 +350,8 @@ with tab_practice:
         if col_s3.button("🎬 Hablar de películas"):
             st.session_state.quick_prompt = "¿Cuáles son algunas buenas películas en español para aprender?"
 
-    # 5. Push-to-Talk Audio & Text Input
-    audio_val = st.audio_input("🎙️ Push-to-Talk (Habla con tu micrófono)")
+    # 5. Bottom Input Area: Push-to-Talk (no emoji) & Text Input
+    audio_val = st.audio_input("Push to Talk (Grabar audio)")
     text_val = st.chat_input("Escribe un mensaje en español o haz una pregunta...")
 
     user_input = None
@@ -348,58 +383,76 @@ FEEDBACK RIGOR: {feedback_style}
 - End your turn with a natural conversational question to continue the flow.
 - If the user struggles with vocabulary or uses mixed English/Spanish ('Spanglish'), gently provide the right term and append a hidden tag: [SAVE: spanish_word | english_translation] to save it to their flashcard deck.
 """
-            # Display User Message
-            if input_is_audio:
-                with st.chat_message("user"):
-                    st.audio(audio_val)
-                user_content_part = types.Part.from_bytes(
-                    data=audio_val.getvalue(),
-                    mime_type="audio/wav"
-                )
-            else:
-                with st.chat_message("user"):
-                    st.markdown(user_input)
-                user_content_part = user_input
-                st.session_state.messages.append({"role": "user", "content": user_input})
+            # Display User Message inside chat container
+            with chat_container:
+                if input_is_audio:
+                    with st.chat_message("user"):
+                        st.audio(audio_val)
+                    user_content_part = types.Part.from_bytes(
+                        data=audio_val.getvalue(),
+                        mime_type="audio/wav"
+                    )
+                else:
+                    with st.chat_message("user"):
+                        st.markdown(user_input)
+                    user_content_part = user_input
+                    st.session_state.messages.append({"role": "user", "content": user_input})
 
-            # Generate Tutor Response with Real-Time Streaming
-            with st.chat_message("assistant", avatar=avatar_img):
-                raw_response = None
-                last_err = None
-                
-                def create_stream(cand_model):
-                    return gemini_client.models.generate_content_stream(
-                        model=cand_model,
-                        contents=user_content_part,
-                        config=types.GenerateContentConfig(
-                            system_instruction=system_instruction,
-                            max_output_tokens=300,
-                            temperature=0.7
-                        )
+                # Generate Tutor Response with Animated 3-Dot Status Indicator & Real-Time Streaming
+                with st.chat_message("assistant", avatar=avatar_img):
+                    typing_placeholder = st.empty()
+                    # Render standard 3-dot messaging animation
+                    typing_placeholder.markdown(
+                        f'<div class="typing-bubble">'
+                        f'<span class="typing-dot"></span>'
+                        f'<span class="typing-dot"></span>'
+                        f'<span class="typing-dot"></span>'
+                        f'</div>',
+                        unsafe_allow_html=True
                     )
 
-                for model_cand in config.fallback_models:
-                    try:
-                        def chunk_gen(model_name):
-                            for chunk in create_stream(model_name):
-                                if chunk.text:
-                                    yield chunk.text
+                    raw_response = None
+                    last_err = None
+                    
+                    def create_stream(cand_model):
+                        return gemini_client.models.generate_content_stream(
+                            model=cand_model,
+                            contents=user_content_part,
+                            config=types.GenerateContentConfig(
+                                system_instruction=system_instruction,
+                                max_output_tokens=300,
+                                temperature=0.7
+                            )
+                        )
 
-                        # Stream tokens to UI in real time
-                        raw_response = st.write_stream(chunk_gen(model_cand))
-                        break
-                    except Exception as e:
-                        last_err = e
-                        logger.warning(f"Model {model_cand} stream error: {e}. Trying fallback...")
-                
-                if raw_response:
-                    clean_text = parse_and_save_vocabulary(raw_response)
-                    st.session_state.messages.append({
-                        "role": "assistant",
-                        "content": clean_text
-                    })
-                else:
-                    st.error(f"Error communicating with Gemini: {last_err}")
+                    for model_cand in config.fallback_models:
+                        try:
+                            def chunk_gen(model_name):
+                                is_first = True
+                                for chunk in create_stream(model_name):
+                                    if chunk.text:
+                                        if is_first:
+                                            typing_placeholder.empty()
+                                            is_first = False
+                                        yield chunk.text
+
+                            # Stream tokens to UI in real time
+                            raw_response = st.write_stream(chunk_gen(model_cand))
+                            break
+                        except Exception as e:
+                            last_err = e
+                            logger.warning(f"Model {model_cand} stream error: {e}. Trying fallback...")
+                    
+                    typing_placeholder.empty()
+
+                    if raw_response:
+                        clean_text = parse_and_save_vocabulary(raw_response)
+                        st.session_state.messages.append({
+                            "role": "assistant",
+                            "content": clean_text
+                        })
+                    else:
+                        st.error(f"Error communicating with Gemini: {last_err}")
 
 # =============================================================================
 # TAB 2: 🎴 Flashcard Deck (MVP Preview)
