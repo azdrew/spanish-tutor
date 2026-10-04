@@ -9,6 +9,7 @@
 * [x] Add all required imports from `requirements.txt` (`streamlit`, `google-genai`, `google-cloud-firestore`, `pyyaml`, `loguru`)[cite: 11].
 * [x] Configure resilient secrets resolution (`st.secrets` with `.env` / `firebase-key.json` fallback)[cite: 11].
 * [x] Deploy to Streamlit Community Cloud and verify the initial UI loads successfully on a mobile browser[cite: 11].
+
 ---
 
 ## 🎯 [x] CHECKPOINT 1.5: Tab 1 UX Polish

@@ -7,15 +7,16 @@ import os
 import re
 import datetime
 from pathlib import Path
-from typing import Optional, Dict, Any, List
+from typing import Optional, Dict, Any
 
 # UI & State
 import streamlit as st
+import streamlit.components.v1 as components
 
 # Environment & Settings
 from dotenv import load_dotenv
 import yaml
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 
 # Logging
 from loguru import logger
@@ -215,8 +216,63 @@ st.markdown("""
             opacity: 1.0;
         }
     }
+    /* Generous bottom padding so on-screen keyboard & input never conceal conversation */
+    .main .block-container {
+        padding-bottom: 12rem !important;
+        scroll-behavior: smooth !important;
+    }
+    [data-testid="stChatInput"] {
+        scroll-margin-bottom: 3rem !important;
+    }
 </style>
 """, unsafe_allow_html=True)
+
+# Client-Side Virtual Keyboard & Auto-Scroll Helper for Mobile
+components.html("""
+<script>
+(function() {
+    const parentDoc = window.parent.document;
+
+    function scrollToBottom() {
+        const mainContainer = parentDoc.querySelector('.main') || parentDoc.documentElement;
+        const chatInput = parentDoc.querySelector('[data-testid="stChatInput"]');
+        if (chatInput) {
+            chatInput.scrollIntoView({ behavior: 'smooth', block: 'end' });
+        }
+        if (mainContainer) {
+            mainContainer.scrollTo({
+                top: mainContainer.scrollHeight,
+                behavior: 'smooth'
+            });
+        }
+    }
+
+    // 1. Detect mobile visual viewport resizing (on-screen keyboard popping up)
+    if (window.parent.visualViewport) {
+        window.parent.visualViewport.addEventListener('resize', () => {
+            const vv = window.parent.visualViewport;
+            if (vv.height < window.parent.innerHeight * 0.82) {
+                // Keyboard has opened
+                setTimeout(scrollToBottom, 150);
+            }
+        });
+    }
+
+    // 2. Attach focus listener to the chat textarea
+    function setupInputListener() {
+        const textarea = parentDoc.querySelector('[data-testid="stChatInput"] textarea');
+        if (textarea && !textarea.dataset.scrollBound) {
+            textarea.dataset.scrollBound = "true";
+            textarea.addEventListener('focus', () => {
+                setTimeout(scrollToBottom, 250);
+                setTimeout(scrollToBottom, 500);
+            });
+        }
+    }
+    setInterval(setupInputListener, 800);
+})();
+</script>
+""", height=0, width=0)
 
 # -----------------------------------------------------------------------------
 # Session State Initialization
