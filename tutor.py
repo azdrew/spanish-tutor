@@ -5,6 +5,9 @@ Architecture & Specifications: PROJECT_CONTEXT.md & PROJECT_DESIGN.md
 
 import os
 import re
+import json
+import base64
+import urllib.request
 import datetime
 from pathlib import Path
 from typing import Optional, Dict, Any
@@ -150,6 +153,113 @@ def parse_and_save_vocabulary(text: str) -> str:
     cleaned_text = re.sub(pattern, "", text).strip()
     return cleaned_text
 
+def synthesize_speech(text: str, persona_name: str = "Gabby", speed_str: str = "1.0x") -> Optional[bytes]:
+    """Generate spoken audio for tutor response using Gemini 3.8 Flash Lite TTS API."""
+    if not GEMINI_API_KEY:
+        logger.warning("GEMINI_API_KEY missing for TTS generation.")
+        return None
+
+    # Strip bracketed tags, markdown symbols, and excess whitespace
+    clean = re.sub(r"\[.*?\]", "", text)
+    clean = re.sub(r"[*_#`~]", "", clean).strip()
+    if not clean:
+        return None
+
+    # Select voice based on persona (Gabby -> female 'Kore', Mateo -> male 'Puck')
+    voice_name = "Kore" if persona_name.lower().startswith("gabb") else "Puck"
+
+    # Adapt pacing description based on selected speech speed
+    if "0.8" in speed_str:
+        style_desc = "clear and deliberate Latin American Spanish tutor speaking slowly and clearly"
+    elif "1.2" in speed_str:
+        style_desc = "fluent and lively Latin American Spanish tutor speaking at an energetic pace"
+    else:
+        style_desc = "warm, friendly, and natural Latin American Spanish tutor speaking conversationally"
+
+    url = f"https://generativelanguage.googleapis.com/v1beta/interactions?key={GEMINI_API_KEY}"
+    payload = {
+        "model": "gemini-3.8-flash-lite-tts",
+        "input": [{
+            "type": "user_input",
+            "content": [{
+                "type": "text",
+                "text": clean,
+                "annotations": [{
+                    "type": "speech_metadata",
+                    "style": style_desc
+                }]
+            }]
+        }],
+        "response_format": {
+            "type": "audio",
+            "mime_type": "audio/wav"
+        },
+        "generation_config": {
+            "speech_config": [
+                {"voice": voice_name}
+            ]
+        }
+    }
+
+    req = urllib.request.Request(
+        url,
+        data=json.dumps(payload).encode("utf-8"),
+        headers={"Content-Type": "application/json"}
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=25) as res:
+            if res.status == 200:
+                data = json.loads(res.read().decode("utf-8"))
+                for step in data.get("steps", []):
+                    for item in step.get("content", []):
+                        if item.get("type") == "audio" and "data" in item:
+                            return base64.b64decode(item["data"])
+    except Exception as e:
+        logger.error(f"Error synthesizing speech audio: {e}")
+    return None
+
+def translate_to_english(text: str) -> Optional[str]:
+    """Translate Spanish tutor response into natural English."""
+    if not GEMINI_API_KEY:
+        logger.warning("GEMINI_API_KEY missing for translation.")
+        return None
+
+    clean = re.sub(r"\[.*?\]", "", text)
+    clean = re.sub(r"[*_#`~]", "", clean).strip()
+    if not clean:
+        return None
+
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key={GEMINI_API_KEY}"
+    payload = {
+        "contents": [{
+            "parts": [{
+                "text": f"Translate the following Spanish conversational text into clear, natural English for a language student. Return ONLY the English translation without quotes or conversational commentary:\n\n{clean}"
+            }]
+        }],
+        "generationConfig": {
+            "temperature": 0.2,
+            "maxOutputTokens": 200
+        }
+    }
+
+    req = urllib.request.Request(
+        url,
+        data=json.dumps(payload).encode("utf-8"),
+        headers={"Content-Type": "application/json"}
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=15) as res:
+            if res.status == 200:
+                data = json.loads(res.read().decode("utf-8"))
+                candidates = data.get("candidates", [])
+                if candidates:
+                    parts = candidates[0].get("content", {}).get("parts", [])
+                    if parts and "text" in parts[0]:
+                        return parts[0]["text"].strip().strip('"').strip("'")
+    except Exception as e:
+        logger.error(f"Error translating Spanish to English: {e}")
+    return None
+
 # -----------------------------------------------------------------------------
 # Streamlit UI Setup
 # -----------------------------------------------------------------------------
@@ -223,6 +333,28 @@ st.markdown("""
     }
     [data-testid="stChatInput"] {
         scroll-margin-bottom: 3rem !important;
+    }
+    /* Inline message action buttons styling */
+    div[data-testid="stChatMessage"] .stButton > button {
+        border-radius: 18px !important;
+        padding: 0.2rem 0.75rem !important;
+        font-size: 0.85rem !important;
+        border: 1px solid rgba(124, 58, 237, 0.25) !important;
+        background-color: #FAFAFC !important;
+        color: #4C1D95 !important;
+        margin-top: 0.25rem !important;
+        min-height: 2rem !important;
+    }
+    div[data-testid="stChatMessage"] .stButton > button:hover {
+        border-color: #7C3AED !important;
+        background-color: #F5F3FF !important;
+        color: #6D28D9 !important;
+    }
+    div[data-testid="stChatMessage"] audio {
+        width: 100% !important;
+        height: 38px !important;
+        margin-top: 0.4rem !important;
+        border-radius: 8px !important;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -332,6 +464,12 @@ with st.sidebar:
         value="1.0x"
     )
 
+    autoplay_voice = st.checkbox(
+        "🔊 Auto-reproducir voz del tutor",
+        value=False,
+        help="Reproduce el audio automáticamente cuando Gabby responde."
+    )
+
     st.divider()
     st.subheader("🔥 Streak")
     st.metric(label="Active Streak", value="1 Day", delta="Keep it up!")
@@ -383,18 +521,64 @@ with tab_practice:
         )
         st.session_state.messages.append({
             "role": "assistant",
-            "content": initial_greeting
+            "content": initial_greeting,
+            "translation": f"Hello! I am {st.session_state.selected_persona}. How are you today? What would you like to talk about or practice?",
+            "audio": None,
+            "show_audio_player": False
         })
 
     # 3. Dedicated Chat Container (Keeps conversation clean & above inputs)
     chat_container = st.container()
 
     with chat_container:
-        for msg in st.session_state.messages:
+        for idx, msg in enumerate(st.session_state.messages):
             role = msg["role"]
             avatar = avatar_img if role == "assistant" else None
             with st.chat_message(role, avatar=avatar):
                 st.markdown(msg["content"])
+
+                if role == "assistant":
+                    # Action buttons row: 🔊 Escuchar & 🈳 Traducir
+                    col_audio, col_trans, _spacer = st.columns([1, 1, 2])
+
+                    with col_audio:
+                        if st.button("🔊 Escuchar", key=f"audio_btn_{idx}", help="Reproducir audio de voz"):
+                            if not msg.get("audio"):
+                                with st.spinner("🎙️ Generando audio..."):
+                                    msg["audio"] = synthesize_speech(
+                                        msg["content"],
+                                        persona_name=st.session_state.selected_persona,
+                                        speed_str=speech_speed
+                                    )
+                            st.session_state[f"play_audio_{idx}"] = True
+                            msg["show_audio_player"] = True
+                            st.rerun()
+
+                    is_translated = st.session_state.get(f"show_trans_{idx}", False)
+                    with col_trans:
+                        trans_label = "🈳 Ocultar" if is_translated else "🈳 Traducir"
+                        if st.button(trans_label, key=f"trans_btn_{idx}", help="Alternar traducción al inglés"):
+                            st.session_state[f"show_trans_{idx}"] = not is_translated
+                            if not is_translated and not msg.get("translation"):
+                                with st.spinner("🈳 Traduciendo..."):
+                                    msg["translation"] = translate_to_english(msg["content"])
+                            st.rerun()
+
+                    # Render audio player if generated
+                    if msg.get("audio") and (st.session_state.get(f"play_audio_{idx}", False) or msg.get("show_audio_player", False)):
+                        autoplay_flag = st.session_state.get(f"play_audio_{idx}", False)
+                        st.audio(msg["audio"], format="audio/wav", autoplay=autoplay_flag)
+                        # Reset single-shot autoplay trigger
+                        st.session_state[f"play_audio_{idx}"] = False
+
+                    # Render English translation card if toggled on
+                    if is_translated and msg.get("translation"):
+                        st.markdown(
+                            f"""<div style="background-color: rgba(124, 58, 237, 0.08); border-left: 3px solid #7C3AED; padding: 8px 12px; border-radius: 8px; margin-top: 6px; font-size: 0.93rem; color: #1F2937;">
+                            🇬🇧 <em>{msg['translation']}</em>
+                            </div>""",
+                            unsafe_allow_html=True
+                        )
 
     # 4. Floating Suggestion / What to say chip
     with st.expander("💡 ¿No sabes qué decir? Sugerencias rápidas"):
@@ -503,10 +687,27 @@ FEEDBACK RIGOR: {feedback_style}
 
                     if raw_response:
                         clean_text = parse_and_save_vocabulary(raw_response)
-                        st.session_state.messages.append({
+                        new_msg = {
                             "role": "assistant",
-                            "content": clean_text
-                        })
+                            "content": clean_text,
+                            "translation": None,
+                            "audio": None,
+                            "show_audio_player": False
+                        }
+                        if autoplay_voice:
+                            with st.spinner("🎙️ Generando audio..."):
+                                audio_bytes = synthesize_speech(
+                                    clean_text,
+                                    persona_name=st.session_state.selected_persona,
+                                    speed_str=speech_speed
+                                )
+                                if audio_bytes:
+                                    new_msg["audio"] = audio_bytes
+                                    new_msg["show_audio_player"] = True
+                                    new_idx = len(st.session_state.messages)
+                                    st.session_state[f"play_audio_{new_idx}"] = True
+                        st.session_state.messages.append(new_msg)
+                        st.rerun()
                     else:
                         st.error(f"Error communicating with Gemini: {last_err}")
 

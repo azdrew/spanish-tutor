@@ -29,7 +29,7 @@
 * [x] **Task 2.2:** Build Tab 1 ("💬 Practice") with the compact 16:9 tutor banner (`st.columns`), avatar chat feed, and `st.audio_input` push-to-talk widget[cite: 9, 10, 11].
 * [x] **Task 2.3:** Integrate Gemini 3.7 Flash API to process raw audio bytes/text and return conversational Spanish responses[cite: 9, 11].
 * [x] **Task 2.4:** Implement automated vocabulary capture: parse `[SAVE: spanish_word]` tags via regex and upsert to Firestore `words/` subcollection[cite: 9, 11].
-* [ ] **Task 2.5:** Add inline spoken tutor TTS audio playback (🔊 Play Audio) and translation toggle (🈳 Translate) to chat bubbles[cite: 9, 10].
+* [x] **Task 2.5:** Add inline spoken tutor TTS audio playback (🔊 Play Audio) and translation toggle (🈳 Translate) to chat bubbles[cite: 9, 10].
 * [ ] **Task 2.6:** Build Tab 2 ("🎴 Flashcards") with basic Leitner Box logic, filtering words due today (`next_review <= today`), and response controls ([Got It], [Wrong], [Pass])[cite: 9, 11].
 
 ---
