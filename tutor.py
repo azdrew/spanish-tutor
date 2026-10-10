@@ -356,6 +356,48 @@ st.markdown("""
         margin-top: 0.4rem !important;
         border-radius: 8px !important;
     }
+    /* Pinned bottom container & Push to Talk styling */
+    [data-testid="stBottom"] {
+        background-color: rgba(255, 255, 255, 0.96) !important;
+        backdrop-filter: blur(10px) !important;
+        border-top: 1px solid rgba(124, 58, 237, 0.15) !important;
+        padding-top: 0.35rem !important;
+        z-index: 100 !important;
+    }
+    [data-testid="stBottom"] [data-testid="stAudioInput"],
+    [data-testid="stBottom"] .stAudioInput {
+        margin-bottom: 0.15rem !important;
+    }
+    [data-testid="stBottom"] [data-testid="stAudioInput"] label,
+    [data-testid="stBottom"] .stAudioInput label {
+        font-size: 0.8rem !important;
+        font-weight: 600 !important;
+        color: #6D28D9 !important;
+        margin-bottom: 0.1rem !important;
+    }
+    /* Fallback positioning for push to talk if st.bottom is unavailable */
+    .st-key-push_to_talk:not([data-testid="stBottom"] *) {
+        position: fixed !important;
+        bottom: 5.2rem !important;
+        left: 50% !important;
+        transform: translateX(-50%) !important;
+        width: min(100%, 46rem) !important;
+        z-index: 99 !important;
+        background: rgba(255, 255, 255, 0.95) !important;
+        backdrop-filter: blur(8px) !important;
+        border-top: 1px solid rgba(124, 58, 237, 0.15) !important;
+        padding: 0.3rem 1rem !important;
+    }
+    /* On mobile, collapse audio input when virtual keyboard opens / text input focused */
+    [data-testid="stBottom"]:has([data-testid="stChatInput"] textarea:focus) [data-testid="stAudioInput"],
+    [data-testid="stBottom"]:has([data-testid="stChatInput"] textarea:focus) .stAudioInput {
+        display: none !important;
+    }
+    /* Hide bottom input container when Tab 2 (Flashcard Deck) is active */
+    body:has([data-testid="stTabs"] button[role="tab"]:nth-child(2)[aria-selected="true"]) [data-testid="stBottom"],
+    body:has([data-testid="stTabs"] button[role="tab"]:nth-child(2)[aria-selected="true"]) .st-key-push_to_talk {
+        display: none !important;
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -513,7 +555,17 @@ with tab_practice:
 
     st.divider()
 
-    # 2. First Message Greeting (if history empty)
+    # 2. Floating Suggestion / What to say chip
+    with st.expander("💡 ¿No sabes qué decir? Sugerencias rápidas"):
+        col_s1, col_s2, col_s3 = st.columns(3)
+        if col_s1.button("🍽️ Quiero pedir comida"):
+            st.session_state.quick_prompt = "Quiero practicar cómo pedir comida en un restaurante mexicano."
+        if col_s2.button("✈️ Planear un viaje"):
+            st.session_state.quick_prompt = "Estoy planeando un viaje a España o Colombia."
+        if col_s3.button("🎬 Hablar de películas"):
+            st.session_state.quick_prompt = "¿Cuáles son algunas buenas películas en español para aprender?"
+
+    # 3. First Message Greeting (if history empty)
     if not st.session_state.messages:
         initial_greeting = (
             f"¡Hola! Soy {st.session_state.selected_persona}. "
@@ -527,7 +579,7 @@ with tab_practice:
             "show_audio_player": False
         })
 
-    # 3. Dedicated Chat Container (Keeps conversation clean & above inputs)
+    # 4. Dedicated Chat Container (Keeps conversation clean & above inputs)
     chat_container = st.container()
 
     with chat_container:
@@ -580,19 +632,14 @@ with tab_practice:
                             unsafe_allow_html=True
                         )
 
-    # 4. Floating Suggestion / What to say chip
-    with st.expander("💡 ¿No sabes qué decir? Sugerencias rápidas"):
-        col_s1, col_s2, col_s3 = st.columns(3)
-        if col_s1.button("🍽️ Quiero pedir comida"):
-            st.session_state.quick_prompt = "Quiero practicar cómo pedir comida en un restaurante mexicano."
-        if col_s2.button("✈️ Planear un viaje"):
-            st.session_state.quick_prompt = "Estoy planeando un viaje a España o Colombia."
-        if col_s3.button("🎬 Hablar de películas"):
-            st.session_state.quick_prompt = "¿Cuáles son algunas buenas películas en español para aprender?"
-
-    # 5. Bottom Input Area: Push-to-Talk (no emoji) & Text Input
-    audio_val = st.audio_input("Push to Talk (Grabar audio)")
-    text_val = st.chat_input("Escribe un mensaje en español o haz una pregunta...")
+    # 5. Bottom Input Area: Pinned cleanly to the bottom of the viewport
+    if hasattr(st, "bottom"):
+        with st.bottom():
+            audio_val = st.audio_input("Push to Talk (Grabar audio)", key="push_to_talk")
+            text_val = st.chat_input("Escribe un mensaje en español o haz una pregunta...")
+    else:
+        audio_val = st.audio_input("Push to Talk (Grabar audio)", key="push_to_talk")
+        text_val = st.chat_input("Escribe un mensaje en español o haz una pregunta...")
 
     user_input = None
     input_is_audio = False
