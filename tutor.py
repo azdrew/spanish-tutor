@@ -634,7 +634,7 @@ with tab_practice:
 
     # 5. Bottom Input Area: Pinned cleanly to the bottom of the viewport
     if hasattr(st, "bottom"):
-        with st.bottom():
+        with st.bottom:
             audio_val = st.audio_input("Push to Talk (Grabar audio)", key="push_to_talk")
             text_val = st.chat_input("Escribe un mensaje en español o haz una pregunta...")
     else:
