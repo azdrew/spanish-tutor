@@ -52,11 +52,11 @@ class AppConfig(BaseModel):
     """Application configuration schema."""
     app_name: str = "Spanish Tutor AI"
     version: str = "0.2.0"
-    model_name: str = "gemini-flash-latest"
+    model_name: str = "gemini-2.5-flash"
     fallback_models: list[str] = [
+        "gemini-2.5-flash",
         "gemini-flash-latest",
         "gemini-3.7-flash",
-        "gemini-3.5-flash-lite",
         "gemini-flash-lite-latest"
     ]
     default_user_id: str = "default_user"
@@ -152,6 +152,26 @@ def parse_and_save_vocabulary(text: str) -> str:
     # Strip tags from display text
     cleaned_text = re.sub(pattern, "", text).strip()
     return cleaned_text
+
+def extract_turn_json(raw_text: str) -> dict:
+    """Extract structured JSON containing transcription and reply from Gemini output."""
+    clean = raw_text.strip()
+    # Strip markdown code blocks ```json ... ``` if present
+    match = re.search(r"```(?:json)?\s*(\{.*?\})\s*```", clean, re.DOTALL)
+    if match:
+        clean = match.group(1)
+    else:
+        # Search for first JSON object enclosed in braces
+        brace_match = re.search(r"(\{.*\})", clean, re.DOTALL)
+        if brace_match:
+            clean = brace_match.group(1)
+    try:
+        data = json.loads(clean)
+        if isinstance(data, dict):
+            return data
+    except Exception as e:
+        logger.warning(f"Failed to parse JSON from Gemini response: {e}. Raw: {raw_text[:200]}")
+    return {"transcription": "", "reply": raw_text}
 
 def synthesize_speech(text: str, persona_name: str = "Gabby", speed_str: str = "1.0x") -> Optional[bytes]:
     """Generate spoken audio for tutor response using Gemini 3.8 Flash Lite TTS API."""
@@ -263,44 +283,168 @@ def translate_to_english(text: str) -> Optional[str]:
 # -----------------------------------------------------------------------------
 # Streamlit UI Setup
 # -----------------------------------------------------------------------------
+# Streamlit UI Setup
+# -----------------------------------------------------------------------------
 st.set_page_config(
     page_title="Spanish Tutor AI",
     page_icon="🇪🇸",
-    layout="wide",
+    layout="centered",
     initial_sidebar_state="collapsed"
 )
 
-# Custom CSS for Modern Praktika-style styling
+# Custom CSS for Modern Praktika-style mobile layout
 st.markdown("""
 <style>
-    .tutor-banner {
-        border-radius: 12px;
-        overflow: hidden;
-        margin-bottom: 1rem;
-        background: linear-gradient(135deg, #4C1D95 0%, #7C3AED 100%);
-        color: white;
-        padding: 1.25rem 1.5rem;
+    /* 1. Header & Viewport Reset - Zero Top Margin Void */
+    header[data-testid="stHeader"] {
+        display: none !important;
+        height: 0 !important;
+        margin: 0 !important;
+        padding: 0 !important;
     }
-    .topic-chip {
-        display: inline-block;
-        background-color: rgba(255, 255, 255, 0.2);
-        color: #F3E8FF;
-        padding: 0.25rem 0.75rem;
-        border-radius: 20px;
-        font-size: 0.85rem;
-        font-weight: 600;
-        margin-bottom: 0.5rem;
+    .main .block-container {
+        padding-top: 0.35rem !important;
+        padding-bottom: 7.5rem !important;
+        max-width: 42rem !important;
+        margin: 0 auto !important;
+        scroll-behavior: smooth !important;
     }
-    .stChatMessage {
-        border-radius: 12px;
+    /* Hide component iframe space */
+    iframe[title="streamlit.components.v1.html"] {
+        display: none !important;
+        height: 0 !important;
     }
+    .element-container:has(> iframe[title="streamlit.components.v1.html"]) {
+        display: none !important;
+        height: 0 !important;
+        margin: 0 !important;
+        padding: 0 !important;
+    }
+
+    /* 2. Banner & Images */
+    [data-testid="stImage"] img {
+        border-radius: 20px !important;
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08) !important;
+        object-fit: cover !important;
+    }
+
+    /* 3. Global Dividers - NO horizontal lines */
+    hr, [data-testid="stDivider"], .stDivider {
+        display: none !important;
+    }
+
+    /* 4. Chat Messages Styling (Praktika mobile bubbles) */
+    [data-testid="stChatMessage"] {
+        background-color: transparent !important;
+        border: none !important;
+        padding: 4px 0 !important;
+        gap: 0 !important;
+        margin-bottom: 0.5rem !important;
+    }
+    /* Hide all avatar containers */
+    [data-testid="stChatMessageAvatarUser"],
+    [data-testid="stChatMessageAvatarAssistant"],
+    [data-testid="stChatMessageAvatarCustom"],
+    [data-testid="stChatMessage"] > div:first-child:has(img),
+    [data-testid="stChatMessage"] > div:first-child:has(svg) {
+        display: none !important;
+    }
+
+    /* User Message - RIGHT Aligned, Vibrant Purple (#7026ED) */
+    div[data-testid="stChatMessage"]:has([data-testid="stChatMessageAvatarUser"]) {
+        display: flex !important;
+        flex-direction: row-reverse !important;
+        justify-content: flex-start !important;
+    }
+    div[data-testid="stChatMessage"]:has([data-testid="stChatMessageAvatarUser"]) [data-testid="stChatMessageContent"] {
+        background-color: #7026ED !important;
+        color: #FFFFFF !important;
+        border-radius: 20px 20px 4px 20px !important;
+        padding: 10px 18px !important;
+        max-width: 80% !important;
+        margin-left: auto !important;
+        box-shadow: 0 2px 8px rgba(112, 38, 237, 0.25) !important;
+    }
+    div[data-testid="stChatMessage"]:has([data-testid="stChatMessageAvatarUser"]) [data-testid="stChatMessageContent"] p {
+        color: #FFFFFF !important;
+        font-size: 1rem !important;
+        font-weight: 500 !important;
+        line-height: 1.4 !important;
+        margin: 0 !important;
+    }
+
+    /* Tutor Message - LEFT Aligned, Light Gray / Off-white (#F3F4F6) */
+    div[data-testid="stChatMessage"]:not(:has([data-testid="stChatMessageAvatarUser"])) {
+        display: flex !important;
+        justify-content: flex-start !important;
+    }
+    div[data-testid="stChatMessage"]:not(:has([data-testid="stChatMessageAvatarUser"])) [data-testid="stChatMessageContent"] {
+        background-color: #F3F4F6 !important;
+        color: #1F2937 !important;
+        border-radius: 20px 20px 20px 4px !important;
+        padding: 12px 18px !important;
+        max-width: 84% !important;
+        margin-right: auto !important;
+    }
+    div[data-testid="stChatMessage"]:not(:has([data-testid="stChatMessageAvatarUser"])) [data-testid="stChatMessageContent"] p {
+        color: #1F2937 !important;
+        font-size: 1rem !important;
+        line-height: 1.45 !important;
+        margin-bottom: 0.25rem !important;
+    }
+
+    /* Highlighted vocabulary tags in tutor messages */
+    .vocab-hl {
+        background-color: #EDE9FE !important;
+        color: #7026ED !important;
+        border-radius: 6px !important;
+        padding: 1px 6px !important;
+        font-weight: 600 !important;
+    }
+
+    /* Tutor action buttons (Replay & Translate) */
+    div[data-testid="stChatMessage"] div[class*="st-key-audio_btn_"] button,
+    div[data-testid="stChatMessage"] div[class*="st-key-trans_btn_"] button {
+        background: transparent !important;
+        background-color: transparent !important;
+        border: none !important;
+        box-shadow: none !important;
+        color: #6B7280 !important;
+        font-size: 0.95rem !important;
+        font-weight: 600 !important;
+        width: 30px !important;
+        height: 30px !important;
+        min-width: 30px !important;
+        min-height: 30px !important;
+        max-width: 30px !important;
+        max-height: 30px !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        border-radius: 6px !important;
+        display: inline-flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        cursor: pointer !important;
+    }
+    div[data-testid="stChatMessage"] div[class*="st-key-audio_btn_"] button:hover,
+    div[data-testid="stChatMessage"] div[class*="st-key-trans_btn_"] button:hover {
+        background-color: rgba(112, 38, 237, 0.1) !important;
+        color: #7026ED !important;
+    }
+    /* Google Translate icon in purple */
+    div[data-testid="stChatMessage"] div[class*="st-key-trans_btn_"] button {
+        color: #7026ED !important;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
+        letter-spacing: -0.5px !important;
+    }
+
+    /* Typing indicator bubble */
     .typing-bubble {
         display: inline-flex;
         align-items: center;
         gap: 6px;
-        padding: 8px 14px;
-        background-color: rgba(124, 58, 237, 0.08);
-        border: 1px solid rgba(124, 58, 237, 0.18);
+        padding: 10px 16px;
+        background-color: #F3F4F6;
         border-radius: 18px;
         margin: 4px 0;
         width: fit-content;
@@ -308,7 +452,7 @@ st.markdown("""
     .typing-dot {
         width: 7px;
         height: 7px;
-        background-color: #7C3AED;
+        background-color: #9CA3AF;
         border-radius: 50%;
         display: inline-block;
         animation: typing-pulse 1.4s infinite ease-in-out both;
@@ -326,77 +470,187 @@ st.markdown("""
             opacity: 1.0;
         }
     }
-    /* Generous bottom padding so on-screen keyboard & input never conceal conversation */
-    .main .block-container {
-        padding-bottom: 12rem !important;
-        scroll-behavior: smooth !important;
-    }
-    [data-testid="stChatInput"] {
-        scroll-margin-bottom: 3rem !important;
-    }
-    /* Inline message action buttons styling */
-    div[data-testid="stChatMessage"] .stButton > button {
-        border-radius: 18px !important;
-        padding: 0.2rem 0.75rem !important;
-        font-size: 0.85rem !important;
-        border: 1px solid rgba(124, 58, 237, 0.25) !important;
-        background-color: #FAFAFC !important;
-        color: #4C1D95 !important;
-        margin-top: 0.25rem !important;
-        min-height: 2rem !important;
-    }
-    div[data-testid="stChatMessage"] .stButton > button:hover {
-        border-color: #7C3AED !important;
-        background-color: #F5F3FF !important;
-        color: #6D28D9 !important;
-    }
-    div[data-testid="stChatMessage"] audio {
-        width: 100% !important;
-        height: 38px !important;
-        margin-top: 0.4rem !important;
-        border-radius: 8px !important;
-    }
-    /* Pinned bottom container & Push to Talk styling */
-    [data-testid="stBottom"] {
-        background-color: rgba(255, 255, 255, 0.96) !important;
-        backdrop-filter: blur(10px) !important;
-        border-top: 1px solid rgba(124, 58, 237, 0.15) !important;
-        padding-top: 0.35rem !important;
+
+    /* 5. Bottom Action Bar (Praktika Floating Style, NO horizontal lines) */
+    [data-testid="stBottom"],
+    .stBottom {
+        background-color: #FFFFFF !important;
+        border-top: none !important;
+        box-shadow: none !important;
+        padding: 0.5rem 1rem !important;
         z-index: 100 !important;
     }
-    [data-testid="stBottom"] [data-testid="stAudioInput"],
-    [data-testid="stBottom"] .stAudioInput {
-        margin-bottom: 0.15rem !important;
+    [data-testid="stBottom"] > div {
+        max-width: 42rem !important;
+        margin: 0 auto !important;
     }
-    [data-testid="stBottom"] [data-testid="stAudioInput"] label,
-    [data-testid="stBottom"] .stAudioInput label {
-        font-size: 0.8rem !important;
+
+    /* Center and style the Push-to-Talk audio input */
+    div[data-testid="stAudioInput"],
+    .stAudioInput {
+        background: transparent !important;
+        border: none !important;
+        box-shadow: none !important;
+        display: flex !important;
+        justify-content: center !important;
+        align-items: center !important;
+        padding: 0 !important;
+        margin: 0 auto !important;
+        width: 100% !important;
+    }
+    div[data-testid="stAudioInput"] > div {
+        background: transparent !important;
+        border: none !important;
+        box-shadow: none !important;
+        display: flex !important;
+        justify-content: center !important;
+        align-items: center !important;
+        padding: 0 !important;
+        gap: 0 !important;
+    }
+    [data-testid="stAudioInput"] label,
+    .stAudioInput label {
+        display: none !important;
+    }
+    /* Hide waveform and timecode completely */
+    [data-testid="stAudioInputWaveSurfer"],
+    [data-testid="stAudioInputWaveformTimeCode"],
+    [data-testid="stAudioInput"] [data-testid="stAudioInputInstructions"] {
+        display: none !important;
+        visibility: hidden !important;
+        width: 0 !important;
+        height: 0 !important;
+    }
+
+    /* Large Purple Push-to-Talk button */
+    button[data-testid="stAudioInputActionButton"] {
+        width: 72px !important;
+        height: 72px !important;
+        min-width: 72px !important;
+        min-height: 72px !important;
+        border-radius: 50% !important;
+        background-color: #7026ED !important;
+        background: #7026ED !important;
+        color: #FFFFFF !important;
+        border: none !important;
+        box-shadow: 0 4px 16px rgba(112, 38, 237, 0.45) !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        cursor: pointer !important;
+        transition: transform 0.15s ease, background-color 0.2s ease !important;
+        margin: 0 auto !important;
+    }
+    button[data-testid="stAudioInputActionButton"]:hover {
+        background-color: #5B1BD0 !important;
+        transform: scale(1.05) !important;
+    }
+    button[data-testid="stAudioInputActionButton"] svg {
+        fill: #FFFFFF !important;
+        color: #FFFFFF !important;
+        width: 32px !important;
+        height: 32px !important;
+    }
+
+    /* Left (+) button */
+    .st-key-btn_plus button,
+    .st-key-toggle_text_mode button {
+        border-radius: 50% !important;
+        width: 52px !important;
+        height: 52px !important;
+        min-width: 52px !important;
+        min-height: 52px !important;
+        padding: 0 !important;
+        margin: 0 auto !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        font-size: 1.5rem !important;
+        font-weight: 400 !important;
+        border: 1px solid #E5E7EB !important;
+        background-color: #F3F4F6 !important;
+        color: #1F2937 !important;
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04) !important;
+    }
+    .st-key-btn_plus button:hover,
+    .st-key-toggle_text_mode button:hover {
+        background-color: #E5E7EB !important;
+    }
+
+    /* Right (📖) book button */
+    .st-key-btn_deck button,
+    .st-key-toggle_flashcards button {
+        border-radius: 50% !important;
+        width: 52px !important;
+        height: 52px !important;
+        min-width: 52px !important;
+        min-height: 52px !important;
+        padding: 0 !important;
+        margin: 0 auto !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        font-size: 1.3rem !important;
+        border: 2px solid #D1FAE5 !important;
+        background-color: #FFFFFF !important;
+        color: #1F2937 !important;
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04) !important;
+    }
+    .st-key-btn_deck button:hover,
+    .st-key-toggle_flashcards button:hover {
+        background-color: #F0FDF4 !important;
+        border-color: #A7F3D0 !important;
+    }
+
+    /* Return to voice button in text mode */
+    .st-key-toggle_voice_mode button {
+        border-radius: 50% !important;
+        width: 44px !important;
+        height: 44px !important;
+        min-width: 44px !important;
+        min-height: 44px !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        font-size: 1.25rem !important;
+        border: none !important;
+        background-color: #7026ED !important;
+        color: #FFFFFF !important;
+        box-shadow: 0 2px 8px rgba(112, 38, 237, 0.3) !important;
+    }
+
+    /* Floating "💡 What to say?" pill chip */
+    .st-key-what_to_say_chip {
+        display: flex !important;
+        justify-content: flex-end !important;
+        margin-bottom: 0.35rem !important;
+    }
+    .st-key-what_to_say_chip button {
+        background-color: #F3E8FF !important;
+        color: #7026ED !important;
+        border: 1px solid #E9D5FF !important;
+        border-radius: 24px !important;
+        padding: 6px 18px !important;
         font-weight: 600 !important;
-        color: #6D28D9 !important;
-        margin-bottom: 0.1rem !important;
+        font-size: 0.95rem !important;
+        box-shadow: 0 2px 6px rgba(112, 38, 237, 0.1) !important;
+        margin-left: auto !important;
     }
-    /* Fallback positioning for push to talk if st.bottom is unavailable */
-    .st-key-push_to_talk:not([data-testid="stBottom"] *) {
-        position: fixed !important;
-        bottom: 5.2rem !important;
-        left: 50% !important;
-        transform: translateX(-50%) !important;
-        width: min(100%, 46rem) !important;
-        z-index: 99 !important;
-        background: rgba(255, 255, 255, 0.95) !important;
-        backdrop-filter: blur(8px) !important;
-        border-top: 1px solid rgba(124, 58, 237, 0.15) !important;
-        padding: 0.3rem 1rem !important;
+    .st-key-what_to_say_chip button:hover {
+        background-color: #E9D5FF !important;
+        border-color: #D8B4FE !important;
     }
-    /* On mobile, collapse audio input when virtual keyboard opens / text input focused */
-    [data-testid="stBottom"]:has([data-testid="stChatInput"] textarea:focus) [data-testid="stAudioInput"],
-    [data-testid="stBottom"]:has([data-testid="stChatInput"] textarea:focus) .stAudioInput {
-        display: none !important;
-    }
-    /* Hide bottom input container when Tab 2 (Flashcard Deck) is active */
-    body:has([data-testid="stTabs"] button[role="tab"]:nth-child(2)[aria-selected="true"]) [data-testid="stBottom"],
-    body:has([data-testid="stTabs"] button[role="tab"]:nth-child(2)[aria-selected="true"]) .st-key-push_to_talk {
-        display: none !important;
+
+    /* Top bar icons */
+    .st-key-btn_close_session button {
+        background: transparent !important;
+        border: none !important;
+        font-size: 1.1rem !important;
+        color: #6B7280 !important;
+        padding: 0 !important;
+        box-shadow: none !important;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -456,6 +710,9 @@ if "messages" not in st.session_state:
 
 if "selected_persona" not in st.session_state:
     st.session_state.selected_persona = yaml_config.get("app_settings", {}).get("default_persona", "Gabby")
+
+if "show_text_input" not in st.session_state:
+    st.session_state.show_text_input = False
 
 # -----------------------------------------------------------------------------
 # Sidebar: Settings & Controls
@@ -525,45 +782,90 @@ with st.sidebar:
         st.write(f"**Pexels API:** {'🟢 Configured' if PEXELS_API_KEY else '🟡 Missing Key'}")
 
 # -----------------------------------------------------------------------------
-# Main Viewport & Tabs
+# Main Viewport & Navigation
 # -----------------------------------------------------------------------------
 current_persona = personas_data.get(st.session_state.selected_persona, {})
 avatar_img = current_persona.get("avatar_path", "assets/gabby.jpg")
 banner_img = current_persona.get("banner_path", "assets/gabby-banner.jpg")
 
-# Navigation Tabs
-tab_practice, tab_flashcards = st.tabs(["💬 Practice Session", "🎴 Flashcard Deck"])
+if "show_flashcards" not in st.session_state:
+    st.session_state.show_flashcards = False
 
 # =============================================================================
-# TAB 1: 💬 Practice Session
+# VIEW 1: 🎴 Flashcard Deck (When toggled via book icon)
 # =============================================================================
-with tab_practice:
-    # 1. Compact 16:9 Tutor Banner (Praktika Style)
-    col_banner_img, col_banner_text = st.columns([1, 2])
-    
-    with col_banner_img:
+if st.session_state.show_flashcards:
+    col_back, col_title = st.columns([1, 5], vertical_alignment="center")
+    with col_back:
+        if st.button("← Volver", key="btn_back_practice"):
+            st.session_state.show_flashcards = False
+            st.rerun()
+    with col_title:
+        st.subheader("🎴 Mazo de Flashcards (Sistema Leitner SRS)")
+    st.caption("Repasa tus palabras guardadas automáticamente durante las conversaciones.")
+
+    preset_decks = yaml_config.get("preset_decks", {})
+    col_fc1, col_fc2 = st.columns([2, 1])
+    with col_fc1:
+        st.subheader("📚 Mazos Temáticos Disponibles")
+        for deck_name, cards in preset_decks.items():
+            with st.expander(f"📦 {deck_name} ({len(cards)} palabras)"):
+                for sp, data in cards.items():
+                    st.write(f"🇪🇸 **{sp}** ➔ 🇬🇧 _{data.get('english', '')}_ (Box {data.get('box', 1)})")
+    with col_fc2:
+        st.subheader("📊 Progreso Leitner")
+        st.metric(label="Palabras Guardadas", value="0", delta="En sincronización")
+        st.info("💡 En la siguiente iteración de Checkpoint 2, podrás repasar tarjetas interactivas con imágenes de Pexels y audio de voz.")
+
+# =============================================================================
+# VIEW 2: 💬 Practice Session (Default Voice-First Experience)
+# =============================================================================
+else:
+    # 1. Top Navigation Bar (Praktika Style: Close ✕ | Persona Name ⌄ | Settings ⚙️)
+    col_top_left, col_top_title, col_top_right = st.columns([1, 4, 1], vertical_alignment="center")
+    with col_top_left:
+        if st.button("✕", key="btn_close_session", help="Reiniciar conversación"):
+            st.session_state.messages = []
+            st.rerun()
+    with col_top_title:
+        st.markdown(
+            f"""<div style="text-align: center; font-weight: 700; font-size: 1.15rem; color: #1F2937;">
+                {st.session_state.selected_persona} <span style="font-size: 0.8rem; color: #7026ED;">▼</span>
+            </div>""",
+            unsafe_allow_html=True
+        )
+    with col_top_right:
+        st.markdown(
+            """<div style="text-align: right; font-size: 1.2rem;">⚙️</div>""",
+            unsafe_allow_html=True
+        )
+
+    # 2. Hero Banner (Right at top, zero empty void) / Auto-Collapse Status Bar
+    user_turn_count = sum(1 for m in st.session_state.messages if m.get("role") == "user")
+
+    if user_turn_count < 2:
+        # Full-width 16:9 banner right at the top
         if Path(banner_img).exists():
-            st.image(banner_img, use_container_width=True)
+            st.image(banner_img, width='stretch')
         elif Path(avatar_img).exists():
-            st.image(avatar_img, use_container_width=True)
-
-    with col_banner_text:
-        st.markdown('<span class="topic-chip">A2 · Conversación Diaria & Viajes</span>', unsafe_allow_html=True)
-        st.markdown(f"### {st.session_state.selected_persona} — Tu Tutora de Español")
-        st.caption(f"_{current_persona.get('desc', 'Práctica conversacional personalizada.')}_")
-        st.info("💡 **Tip:** Habla en español o escribe abajo. Si tienes dudas, puedes preguntar en inglés.")
-
-    st.divider()
-
-    # 2. Floating Suggestion / What to say chip
-    with st.expander("💡 ¿No sabes qué decir? Sugerencias rápidas"):
-        col_s1, col_s2, col_s3 = st.columns(3)
-        if col_s1.button("🍽️ Quiero pedir comida"):
-            st.session_state.quick_prompt = "Quiero practicar cómo pedir comida en un restaurante mexicano."
-        if col_s2.button("✈️ Planear un viaje"):
-            st.session_state.quick_prompt = "Estoy planeando un viaje a España o Colombia."
-        if col_s3.button("🎬 Hablar de películas"):
-            st.session_state.quick_prompt = "¿Cuáles son algunas buenas películas en español para aprender?"
+            st.image(avatar_img, width='stretch')
+    else:
+        # Slim single-row status bar
+        col_avatar_thumb, col_status_text = st.columns([1, 11], vertical_alignment="center")
+        with col_avatar_thumb:
+            if Path(avatar_img).exists():
+                st.image(avatar_img, width=42)
+            elif Path(banner_img).exists():
+                st.image(banner_img, width=42)
+        with col_status_text:
+            st.markdown(
+                f"""<div style="display: flex; align-items: center; gap: 8px;">
+                    <strong style="font-size: 1.05rem; color: #1F2937;">{st.session_state.selected_persona}</strong>
+                    <span style="font-size: 0.75rem; background: #EDE9FE; color: #7026ED; padding: 2px 8px; border-radius: 12px; font-weight: 600;">A2 · Conversación</span>
+                    <span style="font-size: 0.8rem; color: #10B981; font-weight: 500;">● En línea</span>
+                </div>""",
+                unsafe_allow_html=True
+            )
 
     # 3. First Message Greeting (if history empty)
     if not st.session_state.messages:
@@ -579,67 +881,111 @@ with tab_practice:
             "show_audio_player": False
         })
 
-    # 4. Dedicated Chat Container (Keeps conversation clean & above inputs)
+    # 4. Dedicated Chat Container
     chat_container = st.container()
 
     with chat_container:
         for idx, msg in enumerate(st.session_state.messages):
             role = msg["role"]
-            avatar = avatar_img if role == "assistant" else None
-            with st.chat_message(role, avatar=avatar):
+            with st.chat_message(role):
                 st.markdown(msg["content"])
 
                 if role == "assistant":
-                    # Action buttons row: 🔊 Escuchar & 🈳 Traducir
-                    col_audio, col_trans, _spacer = st.columns([1, 1, 2])
+                    # Action buttons under tutor message: Speaker (🔊) next to Google Translate (文A)
+                    col_replay, col_trans, _spacer = st.columns([0.08, 0.08, 0.84], vertical_alignment="center")
 
-                    with col_audio:
-                        if st.button("🔊 Escuchar", key=f"audio_btn_{idx}", help="Reproducir audio de voz"):
+                    with col_replay:
+                        if st.button("🔊", key=f"audio_btn_{idx}", help="Reproducir voz del tutor"):
                             if not msg.get("audio"):
-                                with st.spinner("🎙️ Generando audio..."):
+                                with st.spinner("🎙️..."):
                                     msg["audio"] = synthesize_speech(
                                         msg["content"],
                                         persona_name=st.session_state.selected_persona,
                                         speed_str=speech_speed
                                     )
                             st.session_state[f"play_audio_{idx}"] = True
-                            msg["show_audio_player"] = True
                             st.rerun()
 
                     is_translated = st.session_state.get(f"show_trans_{idx}", False)
                     with col_trans:
-                        trans_label = "🈳 Ocultar" if is_translated else "🈳 Traducir"
-                        if st.button(trans_label, key=f"trans_btn_{idx}", help="Alternar traducción al inglés"):
+                        if st.button("文A", key=f"trans_btn_{idx}", help="Google Translate - Traducción al inglés"):
                             st.session_state[f"show_trans_{idx}"] = not is_translated
                             if not is_translated and not msg.get("translation"):
-                                with st.spinner("🈳 Traduciendo..."):
+                                with st.spinner("🈳..."):
                                     msg["translation"] = translate_to_english(msg["content"])
                             st.rerun()
 
-                    # Render audio player if generated
-                    if msg.get("audio") and (st.session_state.get(f"play_audio_{idx}", False) or msg.get("show_audio_player", False)):
-                        autoplay_flag = st.session_state.get(f"play_audio_{idx}", False)
-                        st.audio(msg["audio"], format="audio/wav", autoplay=autoplay_flag)
-                        # Reset single-shot autoplay trigger
+                    # Seamless invisible audio player for replay
+                    if msg.get("audio") and st.session_state.get(f"play_audio_{idx}", False):
+                        b64_audio = base64.b64encode(msg["audio"]).decode()
+                        st.markdown(
+                            f'<audio autoplay style="display:none;"><source src="data:audio/wav;base64,{b64_audio}" type="audio/wav"></audio>',
+                            unsafe_allow_html=True
+                        )
                         st.session_state[f"play_audio_{idx}"] = False
 
                     # Render English translation card if toggled on
                     if is_translated and msg.get("translation"):
                         st.markdown(
-                            f"""<div style="background-color: rgba(124, 58, 237, 0.08); border-left: 3px solid #7C3AED; padding: 8px 12px; border-radius: 8px; margin-top: 6px; font-size: 0.93rem; color: #1F2937;">
+                            f"""<div style="background-color: #EDE9FE; border-left: 3px solid #7026ED; padding: 6px 12px; border-radius: 8px; margin-top: 6px; font-size: 0.92rem; color: #4C1D95;">
                             🇬🇧 <em>{msg['translation']}</em>
                             </div>""",
                             unsafe_allow_html=True
                         )
 
-    # 5. Bottom Input Area: Pinned cleanly to the bottom of the viewport
+    # 5. Bottom Action Bar: Praktika Voice-First Pattern (No horizontal lines)
+    audio_val = None
+    text_val = None
+
     if hasattr(st, "bottom"):
-        with st.bottom:
-            audio_val = st.audio_input("Push to Talk (Grabar audio)", key="push_to_talk")
-            text_val = st.chat_input("Escribe un mensaje en español o haz una pregunta...")
+        bottom_area = st.bottom
     else:
-        audio_val = st.audio_input("Push to Talk (Grabar audio)", key="push_to_talk")
-        text_val = st.chat_input("Escribe un mensaje en español o haz una pregunta...")
+        bottom_area = st.container()
+
+    with bottom_area:
+        # Floating "💡 What to say?" pill chip aligned right
+        col_chip_space, col_chip_btn = st.columns([1, 1], vertical_alignment="center")
+        with col_chip_btn:
+            if st.button("💡 What to say?", key="what_to_say_chip", help="Sugerencias rápidas de conversación"):
+                st.session_state.show_suggestions = not st.session_state.get("show_suggestions", False)
+                st.rerun()
+
+        if st.session_state.get("show_suggestions", False):
+            c1, c2, c3 = st.columns(3)
+            if c1.button("🍽️ Pedir comida", key="sug_1"):
+                st.session_state.quick_prompt = "Quiero practicar cómo pedir comida en un restaurante mexicano."
+                st.session_state.show_suggestions = False
+                st.rerun()
+            if c2.button("✈️ Planear viaje", key="sug_2"):
+                st.session_state.quick_prompt = "Estoy planeando un viaje a España o Colombia."
+                st.session_state.show_suggestions = False
+                st.rerun()
+            if c3.button("🎬 Películas", key="sug_3"):
+                st.session_state.quick_prompt = "¿Cuáles son algunas frases comunes y útiles en español?"
+                st.session_state.show_suggestions = False
+                st.rerun()
+
+        # Three Bottom Action Buttons (Praktika mobile design)
+        if not st.session_state.show_text_input:
+            col_plus, col_mic, col_book = st.columns([1, 1.4, 1], vertical_alignment="center")
+            with col_plus:
+                if st.button("＋", key="toggle_text_mode", help="Cambiar a escribir texto"):
+                    st.session_state.show_text_input = True
+                    st.rerun()
+            with col_mic:
+                audio_val = st.audio_input("Hablar", label_visibility="collapsed", key="push_to_talk")
+            with col_book:
+                if st.button("📖", key="toggle_flashcards", help="Ver mazo de flashcards"):
+                    st.session_state.show_flashcards = True
+                    st.rerun()
+        else:
+            col_chat, col_btn = st.columns([6, 1], vertical_alignment="center")
+            with col_chat:
+                text_val = st.chat_input("Escribe un mensaje en español...", key="chat_input_field")
+            with col_btn:
+                if st.button("🎙️", key="toggle_voice_mode", help="Volver a modo de voz"):
+                    st.session_state.show_text_input = False
+                    st.rerun()
 
     user_input = None
     input_is_audio = False
@@ -654,13 +1000,13 @@ with tab_practice:
         user_input = audio_val
         input_is_audio = True
 
-    # 6. Process User Turn with Gemini
+    # 6. Process User Turn with Gemini (Structured JSON with Transcription & Reply)
     if user_input:
         gemini_client = get_gemini_client()
         if not gemini_client:
             st.error("GEMINI_API_KEY no encontrada. Revisa los secrets.")
         else:
-            # Build System Instruction
+            # Build System Instruction with Structured JSON format specification
             system_instruction = f"""
 {current_persona.get('system_instruction', '')}
 
@@ -668,27 +1014,33 @@ FEEDBACK RIGOR: {feedback_style}
 - Speak primarily in Latin American Spanish tailored for an advanced beginner (A2).
 - Keep replies engaging, encouraging, and under 3-4 sentences.
 - End your turn with a natural conversational question to continue the flow.
-- If the user struggles with vocabulary or uses mixed English/Spanish ('Spanglish'), gently provide the right term and append a hidden tag: [SAVE: spanish_word | english_translation] to save it to their flashcard deck.
+- If the user struggles with vocabulary or uses mixed English/Spanish ('Spanglish'), gently provide the right term and append a hidden tag: [SAVE: spanish_word | english_translation] inside your reply to save it to their flashcard deck.
+
+CRITICAL STRUCTURED OUTPUT REQUIREMENT:
+You must respond with a valid JSON object containing exactly two string fields:
+{{
+  "transcription": "Accurate verbatim transcription of what the user said (in Spanish or English). If the user provided text input, repeat the user text exactly.",
+  "reply": "Your Spanish response to the user following persona and feedback rules, including any [SAVE: word | translation] tag."
+}}
 """
             # Display User Message inside chat container
             with chat_container:
                 if input_is_audio:
                     with st.chat_message("user"):
-                        st.audio(audio_val)
-                    user_content_part = types.Part.from_bytes(
+                        user_msg_placeholder = st.empty()
+                        user_msg_placeholder.markdown("🎙️ _Transcribiendo audio..._")
+                    latest_part = types.Part.from_bytes(
                         data=audio_val.getvalue(),
                         mime_type="audio/wav"
                     )
                 else:
                     with st.chat_message("user"):
                         st.markdown(user_input)
-                    user_content_part = user_input
-                    st.session_state.messages.append({"role": "user", "content": user_input})
+                    latest_part = types.Part.from_text(text=user_input)
 
-                # Generate Tutor Response with Animated 3-Dot Status Indicator & Real-Time Streaming
-                with st.chat_message("assistant", avatar=avatar_img):
+                # Generate Tutor Response with Animated 3-Dot Status Indicator
+                with st.chat_message("assistant"):
                     typing_placeholder = st.empty()
-                    # Render standard 3-dot messaging animation
                     typing_placeholder.markdown(
                         f'<div class="typing-bubble">'
                         f'<span class="typing-dot"></span>'
@@ -698,42 +1050,61 @@ FEEDBACK RIGOR: {feedback_style}
                         unsafe_allow_html=True
                     )
 
-                    raw_response = None
+                    raw_response_text = None
                     last_err = None
-                    
-                    def create_stream(cand_model):
-                        return gemini_client.models.generate_content_stream(
-                            model=cand_model,
-                            contents=user_content_part,
-                            config=types.GenerateContentConfig(
-                                system_instruction=system_instruction,
-                                max_output_tokens=300,
-                                temperature=0.7
-                            )
-                        )
+
+                    # Build multi-turn conversational history
+                    contents = []
+                    for hist_msg in st.session_state.messages[-6:]:
+                        role_tag = "user" if hist_msg.get("role") == "user" else "model"
+                        if hist_msg.get("content"):
+                            contents.append(types.Content(
+                                role=role_tag,
+                                parts=[types.Part.from_text(text=hist_msg["content"])]
+                            ))
+                    # Append current user turn
+                    contents.append(types.Content(
+                        role="user",
+                        parts=[latest_part]
+                    ))
 
                     for model_cand in config.fallback_models:
                         try:
-                            def chunk_gen(model_name):
-                                is_first = True
-                                for chunk in create_stream(model_name):
-                                    if chunk.text:
-                                        if is_first:
-                                            typing_placeholder.empty()
-                                            is_first = False
-                                        yield chunk.text
-
-                            # Stream tokens to UI in real time
-                            raw_response = st.write_stream(chunk_gen(model_cand))
-                            break
+                            resp = gemini_client.models.generate_content(
+                                model=model_cand,
+                                contents=contents,
+                                config=types.GenerateContentConfig(
+                                    system_instruction=system_instruction,
+                                    response_mime_type="application/json",
+                                    max_output_tokens=500,
+                                    temperature=0.7
+                                )
+                            )
+                            if resp.text:
+                                raw_response_text = resp.text
+                                break
                         except Exception as e:
                             last_err = e
-                            logger.warning(f"Model {model_cand} stream error: {e}. Trying fallback...")
-                    
+                            logger.warning(f"Model {model_cand} generation error: {e}. Trying fallback...")
+
                     typing_placeholder.empty()
 
-                    if raw_response:
-                        clean_text = parse_and_save_vocabulary(raw_response)
+                    if raw_response_text:
+                        turn_data = extract_turn_json(raw_response_text)
+
+                        # Resolve user transcription and persist as text message
+                        if input_is_audio:
+                            user_transcription = turn_data.get("transcription", "").strip() or "🎙️ [Audio grabado]"
+                            user_msg_placeholder.markdown(user_transcription)
+                            st.session_state.messages.append({"role": "user", "content": user_transcription})
+                        else:
+                            st.session_state.messages.append({"role": "user", "content": user_input})
+
+                        # Resolve assistant response
+                        assistant_raw_reply = turn_data.get("reply", "").strip() or raw_response_text
+                        clean_text = parse_and_save_vocabulary(assistant_raw_reply)
+                        st.markdown(clean_text)
+
                         new_msg = {
                             "role": "assistant",
                             "content": clean_text,
@@ -742,7 +1113,7 @@ FEEDBACK RIGOR: {feedback_style}
                             "show_audio_player": False
                         }
                         if autoplay_voice:
-                            with st.spinner("🎙️ Generando audio..."):
+                            with st.spinner("🎙️..."):
                                 audio_bytes = synthesize_speech(
                                     clean_text,
                                     persona_name=st.session_state.selected_persona,
@@ -756,26 +1127,6 @@ FEEDBACK RIGOR: {feedback_style}
                         st.session_state.messages.append(new_msg)
                         st.rerun()
                     else:
+                        if input_is_audio:
+                            user_msg_placeholder.markdown("⚠️ _No se pudo procesar el audio._")
                         st.error(f"Error communicating with Gemini: {last_err}")
-
-# =============================================================================
-# TAB 2: 🎴 Flashcard Deck (MVP Preview)
-# =============================================================================
-with tab_flashcards:
-    st.header("🎴 Mazo de Flashcards (Sistema Leitner SRS)")
-    st.caption("Repasa tus palabras guardadas automáticamente durante las conversaciones.")
-
-    preset_decks = yaml_config.get("preset_decks", {})
-    
-    col_fc1, col_fc2 = st.columns([2, 1])
-    with col_fc1:
-        st.subheader("📚 Mazos Temáticos Disponibles")
-        for deck_name, cards in preset_decks.items():
-            with st.expander(f"📦 {deck_name} ({len(cards)} palabras)"):
-                for sp, data in cards.items():
-                    st.write(f"🇪🇸 **{sp}** ➔ 🇬🇧 _{data.get('english', '')}_ (Box {data.get('box', 1)})")
-    
-    with col_fc2:
-        st.subheader("📊 Progreso Leitner")
-        st.metric(label="Palabras Guardadas", value="0", delta="En sincronización")
-        st.info("💡 En la siguiente iteración de Checkpoint 2, podrás repasar tarjetas interactivas con imágenes de Pexels y audio de voz.")

@@ -22,14 +22,14 @@
   
 
 ---
-### CHECKPOINT 1.6: Praktika UI Enhancements (Auto-Collapse & Voice-First Input)
+## 🎯 [x] CHECKPOINT 1.6: Praktika UI Enhancements (Auto-Collapse & Voice-First Input)
 **Description:** Implement Praktika-style mobile layout improvements to reclaim screen height and streamline conversation.
 
 **Tasks:**
-* [ ] **TASK 1.6.1** Add turn-counter state logic in `tutor.py` to auto-collapse the hero banner after 2 user turns.
-* [ ] **Task 1.6.2** Swap user raw audio players for transcribed speech text bubbles in `st.chat_message("user")`[cite: 4].
-- [ ] Implement `show_text_input` toggle state in bottom bar (`st.audio_input` default + `✏️` toggle button)[cite: 2].
-- [ ] **Task 1.6.3** Update Gemini generation prompt to return structured JSON containing both `transcription` and `reply`.
+* [x] **Task 1.6.1:** Add turn-counter state logic in `tutor.py` to auto-collapse the hero banner after 2 user turns.
+* [x] **Task 1.6.2:** Swap user raw audio players for transcribed speech text bubbles in `st.chat_message("user")`[cite: 4].
+* [x] **Task 1.6.3:** Implement `show_text_input` toggle state in bottom bar (`st.audio_input` default + `✏️` toggle button)[cite: 2].
+* [x] **Task 1.6.4:** Update Gemini generation prompt to return structured JSON containing both `transcription` and `reply`.
 
 ---
 

@@ -60,3 +60,59 @@
 * Action Controls: `[✅ Got It Right]`, `[❌ Got It Wrong]`, `[🤷 Pass / Don't Know]`[cite: 2].
 * Dynamic Image Fetching: Pexels API backfills missing `image_url` fields in Firestore[cite: 2].
 * Spoken "Say the Word" Challenges: Audio interjections evaluated by Gemini[cite: 2].
+
+
+UI Layout
+
+```text
+ ========================================================================
+[ st.set_page_config(layout="centered") ]                               
+========================================================================
+
++----------------------------------------------------------------------+
+|                         DYNAMIC TOP BANNER                           |
+|                                                                      |
+|  STATE A: (user_turns < 2) -> Initial Onboarding                     |
+|  +----------------------------------------------------------------+  |
+|  | [ 🖼️ 16:9 Tutor Banner Image: assets/gabby_banner.jpeg ]         |  |
+|  | **Gabby — Tu Tutora de Español**                               |  |
+|  | Warm & encouraging Latin American Spanish practice.            |  |
+|  +----------------------------------------------------------------+  |
+|                                                                      |
+|  STATE B: (user_turns >= 2) -> Auto-Collapsed Slim Status Bar        |
+|  +----------------------------------------------------------------+  |
+|  | [ 👤 42px Avatar ]  **Gabby** · *A2 Práctica Diaria*           |  |
+|  +----------------------------------------------------------------+  |
++----------------------------------------------------------------------+
+|--------------------------- st.divider() -----------------------------|
++----------------------------------------------------------------------+
+|                CONVERSATIONAL CHAT FEED (st.chat_message)            |
+|                                                                      |
+|   +-------------------------------------------------------------+    |
+|   | 👤 User Speech Bubble (Right-aligned text from audio)        |    |
+|   | "Hola Gabby, ¿cómo estás hoy? Quiero practicar español."     |    |
+|   +-------------------------------------------------------------+    |
+|                                                                      |
+|   +-------------------------------------------------------------+    |
+|   | 👩‍🏫 Gabby Speech Bubble (Left-aligned text response)          |    |
+|   | "¡Hola! Estoy muy bien. ¿Qué hiciste esta mañana?"          |    |
+|   | [ 🔊 Play Audio ]  [ 🈳 Translate ]                         |    |
+|   +-------------------------------------------------------------+    |
+|                                                                      |
++----------------------------------------------------------------------+
+|                                                                      |
+|               PRAKTIKA VOICE-FIRST BOTTOM ACTION BAR                 |
+|                                                                      |
+|  DEFAULT MODE: (not st.session_state.show_text_input)                |
+|  +---------------------------------------------------+ +-----------+  |
+|  |  🎙️ st.audio_input("Hablar", label="collapsed")   | | [ ✏️ Edit ]|  |
+|  +---------------------------------------------------+ +-----------+  |
+|         (Dominates width, prevents keyboard pop-up)      (col_toggle) |
+|                                                                      |
+|  TEXT FALLBACK MODE: (st.session_state.show_text_input == True)      |
+|  +---------------------------------------------------+ +-----------+  |
+|  |  ⌨️ st.chat_input("Escribe un mensaje...")         | | [ 🎙️ Mic ] |  |
+|  +---------------------------------------------------+ +-----------+  |
+|                                                                      |
++----------------------------------------------------------------------+
+```
