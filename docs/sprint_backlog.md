@@ -19,8 +19,23 @@
 * [x] **Task 1.5.2:** Add animated 3-dot messaging status indicator (•••) while Gabby is formulating a response.
 * [x] **Task 1.5.3:** Position Push to Talk button cleanly at the bottom of the conversation feed to eliminate clutter.
 * [x] **Task 1.5.4:** Add mobile virtual keyboard auto-scroll avoidance and bottom padding so text input is never obscured.
+  
 
 ---
+### CHECKPOINT 1.6: Praktika UI Enhancements (Auto-Collapse & Voice-First Input)
+**Description:** Implement Praktika-style mobile layout improvements to reclaim screen height and streamline conversation.
+
+**Tasks:**
+* [ ] **TASK 1.6.1** Add turn-counter state logic in `tutor.py` to auto-collapse the hero banner after 2 user turns.
+* [ ] **Task 1.6.2** Swap user raw audio players for transcribed speech text bubbles in `st.chat_message("user")`[cite: 4].
+- [ ] Implement `show_text_input` toggle state in bottom bar (`st.audio_input` default + `✏️` toggle button)[cite: 2].
+- [ ] **Task 1.6.3** Update Gemini generation prompt to return structured JSON containing both `transcription` and `reply`.
+
+---
+
+## 🎯 [ ] CHECKPOINT 1.7. Deploy to Google Cloud
+ 
+
 
 ## 🎯 [ ] CHECKPOINT 2: The MVP (Minimum Viable Product)
 **Goal:** Deliver the core value proposition—talking to Gabby and saving words to a spaced repetition deck—using the Praktika-inspired layout.
@@ -33,6 +48,8 @@
 * [ ] **Task 2.6:** Build Tab 2 ("🎴 Flashcards") with basic Leitner Box logic, filtering words due today (`next_review <= today`), and response controls ([Got It], [Wrong], [Pass])[cite: 9, 11].
 
 ---
+
+
 
 ## 🎯 [ ] CHECKPOINT 3: V1 Finished and Published
 **Goal:** Polish the app into a fully-featured, cross-device experience ready for daily use and external testers.
