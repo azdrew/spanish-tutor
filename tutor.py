@@ -470,24 +470,36 @@ st.markdown("""
         }
     }
 
-    /* 5. Bottom Action Bar - Floating buttons ONLY, NO surrounding box, NO background, NO borders */
+    /* 5. Bottom Action Bar - At the very bottom of the screen, floating and transparent */
     [data-testid="stBottom"],
-    [data-testid="stBottom"] > div,
-    [data-testid="stBottom"] > div > div,
-    .stBottom,
-    .stBottom > div {
+    .stBottom {
         background: transparent !important;
         background-color: transparent !important;
         border: none !important;
         border-top: none !important;
         box-shadow: none !important;
         backdrop-filter: none !important;
-        padding: 0.25rem 1rem 1rem 1rem !important;
+        padding: 0 0 0.5rem 0 !important;
+        margin: 0 !important;
+        bottom: 0 !important;
         z-index: 100 !important;
     }
     [data-testid="stBottom"] > div {
-        max-width: 42rem !important;
+        background: transparent !important;
+        background-color: transparent !important;
+        border: none !important;
+        box-shadow: none !important;
+        padding: 0 1rem !important;
         margin: 0 auto !important;
+        max-width: 44rem !important;
+    }
+    [data-testid="stBottom"] > div > div {
+        background: transparent !important;
+        background-color: transparent !important;
+        border: none !important;
+        box-shadow: none !important;
+        padding: 0 !important;
+        margin: 0 !important;
     }
 
     /* Completely strip all boxes, borders, outlines, and backgrounds from stAudioInput */
@@ -514,6 +526,7 @@ st.markdown("""
         justify-content: center !important;
         align-items: center !important;
         padding: 0 !important;
+        margin: 0 auto !important;
         gap: 0 !important;
     }
     [data-testid="stAudioInput"] label,
@@ -530,7 +543,7 @@ st.markdown("""
         height: 0 !important;
     }
 
-    /* Large Purple Push-to-Talk button */
+    /* Large Purple Push-to-Talk button - Centered */
     button[data-testid="stAudioInputActionButton"] {
         width: 72px !important;
         height: 72px !important;
@@ -560,7 +573,13 @@ st.markdown("""
         height: 32px !important;
     }
 
-    /* Left (+) button */
+    /* Left (+) button - Aligned Left */
+    .st-key-btn_plus,
+    .st-key-toggle_text_mode {
+        display: flex !important;
+        justify-content: flex-start !important;
+        align-items: center !important;
+    }
     .st-key-btn_plus button,
     .st-key-toggle_text_mode button {
         border-radius: 50% !important;
@@ -569,7 +588,9 @@ st.markdown("""
         min-width: 52px !important;
         min-height: 52px !important;
         padding: 0 !important;
-        margin: 0 auto !important;
+        margin: 0 !important;
+        margin-left: 0 !important;
+        margin-right: auto !important;
         display: flex !important;
         align-items: center !important;
         justify-content: center !important;
@@ -876,8 +897,8 @@ else:
 
     with bottom_area:
         if not st.session_state.show_text_input:
-            # Voice Mode: ONLY (+) button and centered large push to talk button
-            col_plus, col_mic, _spacer = st.columns([1, 3, 1], vertical_alignment="center")
+            # Voice Mode: ONLY (+) button on far left and centered large push to talk button
+            col_plus, col_mic, _spacer = st.columns([1, 1, 1], vertical_alignment="center")
             with col_plus:
                 if st.button("＋", key="toggle_text_mode", help="Cambiar a escribir texto"):
                     st.session_state.show_text_input = True
