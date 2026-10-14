@@ -295,15 +295,14 @@ st.set_page_config(
 # Custom CSS for Modern Praktika-style mobile layout
 st.markdown("""
 <style>
-    /* 1. Header & Viewport Reset - Zero Top Margin Void */
+    /* 1. Header & Viewport Reset - Retain hamburger menu & sidebar controls */
     header[data-testid="stHeader"] {
-        display: none !important;
-        height: 0 !important;
-        margin: 0 !important;
-        padding: 0 !important;
+        background: transparent !important;
+        height: 2.5rem !important;
+        z-index: 50 !important;
     }
     .main .block-container {
-        padding-top: 0.35rem !important;
+        padding-top: 1.25rem !important;
         padding-bottom: 7.5rem !important;
         max-width: 42rem !important;
         margin: 0 auto !important;
@@ -643,15 +642,6 @@ st.markdown("""
         border-color: #D8B4FE !important;
     }
 
-    /* Top bar icons */
-    .st-key-btn_close_session button {
-        background: transparent !important;
-        border: none !important;
-        font-size: 1.1rem !important;
-        color: #6B7280 !important;
-        padding: 0 !important;
-        box-shadow: none !important;
-    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -821,30 +811,11 @@ if st.session_state.show_flashcards:
 # VIEW 2: 💬 Practice Session (Default Voice-First Experience)
 # =============================================================================
 else:
-    # 1. Top Navigation Bar (Praktika Style: Close ✕ | Persona Name ⌄ | Settings ⚙️)
-    col_top_left, col_top_title, col_top_right = st.columns([1, 4, 1], vertical_alignment="center")
-    with col_top_left:
-        if st.button("✕", key="btn_close_session", help="Reiniciar conversación"):
-            st.session_state.messages = []
-            st.rerun()
-    with col_top_title:
-        st.markdown(
-            f"""<div style="text-align: center; font-weight: 700; font-size: 1.15rem; color: #1F2937;">
-                {st.session_state.selected_persona} <span style="font-size: 0.8rem; color: #7026ED;">▼</span>
-            </div>""",
-            unsafe_allow_html=True
-        )
-    with col_top_right:
-        st.markdown(
-            """<div style="text-align: right; font-size: 1.2rem;">⚙️</div>""",
-            unsafe_allow_html=True
-        )
-
-    # 2. Hero Banner (Right at top, zero empty void) / Auto-Collapse Status Bar
+    # 1. Hero Banner (Right at the top) / Auto-Collapse Status Bar
     user_turn_count = sum(1 for m in st.session_state.messages if m.get("role") == "user")
 
     if user_turn_count < 2:
-        # Full-width 16:9 banner right at the top
+        # Full-width 16:9 banner right at the very top
         if Path(banner_img).exists():
             st.image(banner_img, width='stretch')
         elif Path(avatar_img).exists():
