@@ -470,7 +470,7 @@ st.markdown("""
         }
     }
 
-    /* 5. Bottom Action Bar - At the very bottom of the screen, floating and transparent */
+    /* 5. Bottom Action Bar - Exact Center Push-to-Talk & Left (+) Button */
     [data-testid="stBottom"],
     .stBottom {
         background: transparent !important;
@@ -479,7 +479,7 @@ st.markdown("""
         border-top: none !important;
         box-shadow: none !important;
         backdrop-filter: none !important;
-        padding: 0 0 0.5rem 0 !important;
+        padding: 0 !important;
         margin: 0 !important;
         bottom: 0 !important;
         z-index: 100 !important;
@@ -489,9 +489,11 @@ st.markdown("""
         background-color: transparent !important;
         border: none !important;
         box-shadow: none !important;
-        padding: 0 1rem !important;
+        padding: 0 1rem 1rem 1rem !important;
         margin: 0 auto !important;
         max-width: 44rem !important;
+        min-height: 96px !important;
+        position: relative !important;
     }
     [data-testid="stBottom"] > div > div {
         background: transparent !important;
@@ -513,54 +515,63 @@ st.markdown("""
         box-shadow: none !important;
         outline: none !important;
     }
+    
+    /* Push-to-Talk button: EXACT HORIZONTAL CENTER AT VERY BOTTOM */
     div[data-testid="stAudioInput"] {
+        position: fixed !important;
+        bottom: 20px !important;
+        left: 50% !important;
+        transform: translateX(-50%) !important;
+        width: auto !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        z-index: 9999 !important;
         display: flex !important;
         justify-content: center !important;
         align-items: center !important;
-        padding: 0 !important;
-        margin: 0 auto !important;
-        width: 100% !important;
     }
     div[data-testid="stAudioInput"] > div {
         display: flex !important;
         justify-content: center !important;
         align-items: center !important;
+        width: auto !important;
+        margin: 0 !important;
         padding: 0 !important;
-        margin: 0 auto !important;
         gap: 0 !important;
     }
     [data-testid="stAudioInput"] label,
     .stAudioInput label {
         display: none !important;
     }
-    /* Hide waveform, timecode, and helper instructions completely */
+    /* Hide waveform, timecode, instructions, and delete button completely */
     [data-testid="stAudioInputWaveSurfer"],
     [data-testid="stAudioInputWaveformTimeCode"],
-    [data-testid="stAudioInput"] [data-testid="stAudioInputInstructions"] {
+    [data-testid="stAudioInput"] [data-testid="stAudioInputInstructions"],
+    [data-testid="stAudioInput"] [data-testid="stAudioInputDeleteButton"] {
         display: none !important;
         visibility: hidden !important;
         width: 0 !important;
         height: 0 !important;
     }
 
-    /* Large Purple Push-to-Talk button - Centered */
+    /* Large Purple Push-to-Talk Circle */
     button[data-testid="stAudioInputActionButton"] {
-        width: 72px !important;
-        height: 72px !important;
-        min-width: 72px !important;
-        min-height: 72px !important;
+        width: 76px !important;
+        height: 76px !important;
+        min-width: 76px !important;
+        min-height: 76px !important;
         border-radius: 50% !important;
         background-color: #7026ED !important;
         background: #7026ED !important;
         color: #FFFFFF !important;
         border: none !important;
-        box-shadow: 0 4px 16px rgba(112, 38, 237, 0.45) !important;
+        box-shadow: 0 4px 18px rgba(112, 38, 237, 0.45) !important;
         display: flex !important;
         align-items: center !important;
         justify-content: center !important;
         cursor: pointer !important;
         transition: transform 0.15s ease, background-color 0.2s ease !important;
-        margin: 0 auto !important;
+        margin: 0 !important;
     }
     button[data-testid="stAudioInputActionButton"]:hover {
         background-color: #5B1BD0 !important;
@@ -569,15 +580,21 @@ st.markdown("""
     button[data-testid="stAudioInputActionButton"] svg {
         fill: #FFFFFF !important;
         color: #FFFFFF !important;
-        width: 32px !important;
-        height: 32px !important;
+        width: 34px !important;
+        height: 34px !important;
     }
 
-    /* Left (+) button - Aligned Left */
+    /* Left (+) button: ALIGNED TO FAR LEFT AT VERY BOTTOM */
     .st-key-btn_plus,
     .st-key-toggle_text_mode {
+        position: fixed !important;
+        bottom: 28px !important;
+        left: max(20px, calc(50% - 21rem + 20px)) !important;
+        z-index: 9999 !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        width: auto !important;
         display: flex !important;
-        justify-content: flex-start !important;
         align-items: center !important;
     }
     .st-key-btn_plus button,
@@ -589,21 +606,20 @@ st.markdown("""
         min-height: 52px !important;
         padding: 0 !important;
         margin: 0 !important;
-        margin-left: 0 !important;
-        margin-right: auto !important;
         display: flex !important;
         align-items: center !important;
         justify-content: center !important;
-        font-size: 1.5rem !important;
+        font-size: 1.6rem !important;
         font-weight: 400 !important;
         border: 1px solid #E5E7EB !important;
         background-color: #F3F4F6 !important;
         color: #1F2937 !important;
-        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04) !important;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06) !important;
     }
     .st-key-btn_plus button:hover,
     .st-key-toggle_text_mode button:hover {
         background-color: #E5E7EB !important;
+        transform: scale(1.05) !important;
     }
 
     /* Return to voice button in text mode */
@@ -897,8 +913,8 @@ else:
 
     with bottom_area:
         if not st.session_state.show_text_input:
-            # Voice Mode: ONLY (+) button on far left and centered large push to talk button
-            col_plus, col_mic, _spacer = st.columns([1, 1, 1], vertical_alignment="center")
+            # Voice Mode: Left (+) button and Center Push-to-Talk button
+            col_plus, col_mic = st.columns([1, 4], vertical_alignment="center")
             with col_plus:
                 if st.button("＋", key="toggle_text_mode", help="Cambiar a escribir texto"):
                     st.session_state.show_text_input = True
