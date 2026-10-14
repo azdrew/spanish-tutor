@@ -470,13 +470,19 @@ st.markdown("""
         }
     }
 
-    /* 5. Bottom Action Bar (Praktika Floating Style, NO horizontal lines) */
+    /* 5. Bottom Action Bar - Floating buttons ONLY, NO surrounding box, NO background, NO borders */
     [data-testid="stBottom"],
-    .stBottom {
-        background-color: #FFFFFF !important;
+    [data-testid="stBottom"] > div,
+    [data-testid="stBottom"] > div > div,
+    .stBottom,
+    .stBottom > div {
+        background: transparent !important;
+        background-color: transparent !important;
+        border: none !important;
         border-top: none !important;
         box-shadow: none !important;
-        padding: 0.5rem 1rem !important;
+        backdrop-filter: none !important;
+        padding: 0.25rem 1rem 1rem 1rem !important;
         z-index: 100 !important;
     }
     [data-testid="stBottom"] > div {
@@ -484,12 +490,18 @@ st.markdown("""
         margin: 0 auto !important;
     }
 
-    /* Center and style the Push-to-Talk audio input */
+    /* Completely strip all boxes, borders, outlines, and backgrounds from stAudioInput */
     div[data-testid="stAudioInput"],
-    .stAudioInput {
+    div[data-testid="stAudioInput"] *,
+    .stAudioInput,
+    .stAudioInput * {
         background: transparent !important;
+        background-color: transparent !important;
         border: none !important;
         box-shadow: none !important;
+        outline: none !important;
+    }
+    div[data-testid="stAudioInput"] {
         display: flex !important;
         justify-content: center !important;
         align-items: center !important;
@@ -498,9 +510,6 @@ st.markdown("""
         width: 100% !important;
     }
     div[data-testid="stAudioInput"] > div {
-        background: transparent !important;
-        border: none !important;
-        box-shadow: none !important;
         display: flex !important;
         justify-content: center !important;
         align-items: center !important;
@@ -511,7 +520,7 @@ st.markdown("""
     .stAudioInput label {
         display: none !important;
     }
-    /* Hide waveform and timecode completely */
+    /* Hide waveform, timecode, and helper instructions completely */
     [data-testid="stAudioInputWaveSurfer"],
     [data-testid="stAudioInputWaveformTimeCode"],
     [data-testid="stAudioInput"] [data-testid="stAudioInputInstructions"] {
@@ -576,31 +585,6 @@ st.markdown("""
         background-color: #E5E7EB !important;
     }
 
-    /* Right (📖) book button */
-    .st-key-btn_deck button,
-    .st-key-toggle_flashcards button {
-        border-radius: 50% !important;
-        width: 52px !important;
-        height: 52px !important;
-        min-width: 52px !important;
-        min-height: 52px !important;
-        padding: 0 !important;
-        margin: 0 auto !important;
-        display: flex !important;
-        align-items: center !important;
-        justify-content: center !important;
-        font-size: 1.3rem !important;
-        border: 2px solid #D1FAE5 !important;
-        background-color: #FFFFFF !important;
-        color: #1F2937 !important;
-        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04) !important;
-    }
-    .st-key-btn_deck button:hover,
-    .st-key-toggle_flashcards button:hover {
-        background-color: #F0FDF4 !important;
-        border-color: #A7F3D0 !important;
-    }
-
     /* Return to voice button in text mode */
     .st-key-toggle_voice_mode button {
         border-radius: 50% !important;
@@ -619,29 +603,6 @@ st.markdown("""
         color: #FFFFFF !important;
         box-shadow: 0 2px 8px rgba(112, 38, 237, 0.3) !important;
     }
-
-    /* Floating "💡 What to say?" pill chip */
-    .st-key-what_to_say_chip {
-        display: flex !important;
-        justify-content: flex-end !important;
-        margin-bottom: 0.35rem !important;
-    }
-    .st-key-what_to_say_chip button {
-        background-color: #F3E8FF !important;
-        color: #7026ED !important;
-        border: 1px solid #E9D5FF !important;
-        border-radius: 24px !important;
-        padding: 6px 18px !important;
-        font-weight: 600 !important;
-        font-size: 0.95rem !important;
-        box-shadow: 0 2px 6px rgba(112, 38, 237, 0.1) !important;
-        margin-left: auto !important;
-    }
-    .st-key-what_to_say_chip button:hover {
-        background-color: #E9D5FF !important;
-        border-color: #D8B4FE !important;
-    }
-
 </style>
 """, unsafe_allow_html=True)
 
@@ -914,42 +875,17 @@ else:
         bottom_area = st.container()
 
     with bottom_area:
-        # Floating "💡 What to say?" pill chip aligned right
-        col_chip_space, col_chip_btn = st.columns([1, 1], vertical_alignment="center")
-        with col_chip_btn:
-            if st.button("💡 What to say?", key="what_to_say_chip", help="Sugerencias rápidas de conversación"):
-                st.session_state.show_suggestions = not st.session_state.get("show_suggestions", False)
-                st.rerun()
-
-        if st.session_state.get("show_suggestions", False):
-            c1, c2, c3 = st.columns(3)
-            if c1.button("🍽️ Pedir comida", key="sug_1"):
-                st.session_state.quick_prompt = "Quiero practicar cómo pedir comida en un restaurante mexicano."
-                st.session_state.show_suggestions = False
-                st.rerun()
-            if c2.button("✈️ Planear viaje", key="sug_2"):
-                st.session_state.quick_prompt = "Estoy planeando un viaje a España o Colombia."
-                st.session_state.show_suggestions = False
-                st.rerun()
-            if c3.button("🎬 Películas", key="sug_3"):
-                st.session_state.quick_prompt = "¿Cuáles son algunas frases comunes y útiles en español?"
-                st.session_state.show_suggestions = False
-                st.rerun()
-
-        # Three Bottom Action Buttons (Praktika mobile design)
         if not st.session_state.show_text_input:
-            col_plus, col_mic, col_book = st.columns([1, 1.4, 1], vertical_alignment="center")
+            # Voice Mode: ONLY (+) button and centered large push to talk button
+            col_plus, col_mic, _spacer = st.columns([1, 3, 1], vertical_alignment="center")
             with col_plus:
                 if st.button("＋", key="toggle_text_mode", help="Cambiar a escribir texto"):
                     st.session_state.show_text_input = True
                     st.rerun()
             with col_mic:
                 audio_val = st.audio_input("Hablar", label_visibility="collapsed", key="push_to_talk")
-            with col_book:
-                if st.button("📖", key="toggle_flashcards", help="Ver mazo de flashcards"):
-                    st.session_state.show_flashcards = True
-                    st.rerun()
         else:
+            # Text Mode: chat input on left, microphone button on right
             col_chat, col_btn = st.columns([6, 1], vertical_alignment="center")
             with col_chat:
                 text_val = st.chat_input("Escribe un mensaje en español...", key="chat_input_field")
