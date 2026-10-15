@@ -603,7 +603,9 @@ st.markdown("""
 
     /* Completely strip all boxes, borders, outlines, and backgrounds from stAudioInput containers */
     div[data-testid="stAudioInput"],
-    div[data-testid="stAudioInput"] > div {
+    div[data-testid="stAudioInput"] > div,
+    .stAudioInput,
+    .stAudioInput > div {
         background: transparent !important;
         background-color: transparent !important;
         border: none !important;
@@ -611,11 +613,23 @@ st.markdown("""
         outline: none !important;
         overflow: visible !important;
     }
+    div[data-testid="stAudioInput"] *:not(button):not(svg):not(path) {
+        background: transparent !important;
+        background-color: transparent !important;
+        border: none !important;
+        box-shadow: none !important;
+        outline: none !important;
+    }
+    /* Hide any internal error or status spans so the button remains a pristine circle */
+    div[data-testid="stAudioInput"] span,
+    div[data-testid="stAudioInput"] p {
+        display: none !important;
+    }
     
     /* Push-to-Talk container: EXACT HORIZONTAL CENTER AT VERY BOTTOM */
     div[data-testid="stAudioInput"] {
         position: fixed !important;
-        bottom: 20px !important;
+        bottom: 16px !important;
         left: 50% !important;
         transform: translateX(-50%) !important;
         width: 76px !important;
@@ -663,25 +677,6 @@ st.markdown("""
         border: none !important;
     }
 
-    /* Floating badge for stAudioInput error message */
-    div[data-testid="stAudioInput"] span:not(:empty),
-    div[data-testid="stAudioInput"] div:has(> button) + span {
-        position: absolute !important;
-        bottom: 86px !important;
-        left: 50% !important;
-        transform: translateX(-50%) !important;
-        background: rgba(31, 41, 55, 0.95) !important;
-        color: #FCA5A5 !important;
-        padding: 6px 14px !important;
-        border-radius: 12px !important;
-        font-size: 0.8rem !important;
-        white-space: nowrap !important;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.3) !important;
-        border: 1px solid rgba(239, 68, 68, 0.3) !important;
-        pointer-events: none !important;
-        text-align: center !important;
-        z-index: 10000 !important;
-    }
 
     /* Full Round Purple Push-to-Talk Circle with Transparent Background */
     button[data-testid="stAudioInputActionButton"] {
