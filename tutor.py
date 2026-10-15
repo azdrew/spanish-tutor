@@ -303,21 +303,31 @@ st.markdown("""
     }
     .main .block-container {
         padding-top: 1.25rem !important;
-        padding-bottom: 7.5rem !important;
+        padding-bottom: 2.5rem !important;
         max-width: 42rem !important;
         margin: 0 auto !important;
         scroll-behavior: smooth !important;
     }
-    /* Hide component iframe space */
+    /* Hide component iframe space cleanly without pausing script execution */
     iframe[title="streamlit.components.v1.html"] {
-        display: none !important;
-        height: 0 !important;
+        position: fixed !important;
+        top: -9999px !important;
+        left: -9999px !important;
+        width: 1px !important;
+        height: 1px !important;
+        opacity: 0 !important;
+        border: none !important;
+        pointer-events: none !important;
     }
     .element-container:has(> iframe[title="streamlit.components.v1.html"]) {
-        display: none !important;
+        position: fixed !important;
+        top: -9999px !important;
+        left: -9999px !important;
+        width: 0 !important;
         height: 0 !important;
         margin: 0 !important;
         padding: 0 !important;
+        pointer-events: none !important;
     }
 
     /* 2. Banner & Images */
@@ -678,49 +688,89 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# Client-Side Virtual Keyboard & Auto-Scroll Helper for Mobile
+# Client-Side Virtual Keyboard & Auto-Scroll Helper for Mobile & Desktop
 components.html("""
 <script>
 (function() {
     const parentDoc = window.parent.document;
 
     function scrollToBottom() {
-        const mainContainer = parentDoc.querySelector('.main') || parentDoc.documentElement;
-        const chatInput = parentDoc.querySelector('[data-testid="stChatInput"]');
-        if (chatInput) {
-            chatInput.scrollIntoView({ behavior: 'smooth', block: 'end' });
+        const anchor = parentDoc.getElementById('chat-bottom-anchor');
+        if (anchor) {
+            anchor.scrollIntoView({ behavior: 'smooth', block: 'end' });
+        } else {
+            const messages = parentDoc.querySelectorAll('[data-testid="stChatMessage"]');
+            if (messages.length > 0) {
+                messages[messages.length - 1].scrollIntoView({ behavior: 'smooth', block: 'end' });
+            }
         }
-        if (mainContainer) {
-            mainContainer.scrollTo({
-                top: mainContainer.scrollHeight,
-                behavior: 'smooth'
-            });
-        }
+
+        const scrollContainers = [
+            parentDoc.querySelector('[data-testid="stAppViewContainer"]'),
+            parentDoc.querySelector('section.main'),
+            parentDoc.querySelector('.main'),
+            parentDoc.documentElement,
+            parentDoc.body,
+            window.parent
+        ];
+        scrollContainers.forEach(c => {
+            try {
+                if (c && typeof c.scrollTo === 'function') {
+                    c.scrollTo({
+                        top: c.scrollHeight || 999999,
+                        behavior: 'smooth'
+                    });
+                } else if (c && c.scrollTop !== undefined) {
+                    c.scrollTop = c.scrollHeight || 999999;
+                }
+            } catch(e) {}
+        });
     }
 
-    // 1. Detect mobile visual viewport resizing (on-screen keyboard popping up)
+    // Scroll on initial mount and reruns
+    setTimeout(scrollToBottom, 100);
+    setTimeout(scrollToBottom, 350);
+    setTimeout(scrollToBottom, 750);
+
+    // Watch for chat state changes (when user speaks/types or tutor finishes)
+    let lastStateSig = "";
+    function checkStateAndScroll() {
+        const msgs = parentDoc.querySelectorAll('[data-testid="stChatMessage"]');
+        const typing = parentDoc.querySelector('.typing-bubble');
+        const mainEl = parentDoc.querySelector('.main');
+        const textLen = mainEl ? mainEl.innerText.length : 0;
+        const currentSig = `${msgs.length}-${!!typing}-${textLen}`;
+        if (currentSig !== lastStateSig) {
+            lastStateSig = currentSig;
+            scrollToBottom();
+            setTimeout(scrollToBottom, 150);
+            setTimeout(scrollToBottom, 400);
+        }
+    }
+    setInterval(checkStateAndScroll, 200);
+
+    // Detect mobile visual viewport resizing (on-screen keyboard popping up)
     if (window.parent.visualViewport) {
         window.parent.visualViewport.addEventListener('resize', () => {
             const vv = window.parent.visualViewport;
             if (vv.height < window.parent.innerHeight * 0.82) {
-                // Keyboard has opened
                 setTimeout(scrollToBottom, 150);
             }
         });
     }
 
-    // 2. Attach focus listener to the chat textarea
+    // Attach focus listener to the chat textarea
     function setupInputListener() {
         const textarea = parentDoc.querySelector('[data-testid="stChatInput"] textarea');
         if (textarea && !textarea.dataset.scrollBound) {
             textarea.dataset.scrollBound = "true";
             textarea.addEventListener('focus', () => {
-                setTimeout(scrollToBottom, 250);
+                setTimeout(scrollToBottom, 200);
                 setTimeout(scrollToBottom, 500);
             });
         }
     }
-    setInterval(setupInputListener, 800);
+    setInterval(setupInputListener, 600);
 })();
 </script>
 """, height=0, width=0)
@@ -936,6 +986,9 @@ else:
                             </div>""",
                             unsafe_allow_html=True
                         )
+
+        # Clear anchor so tutor response and action buttons always scroll above the push-to-talk button
+        st.markdown('<div id="chat-bottom-anchor" style="height: 125px; width: 100%; pointer-events: none; margin: 0; padding: 0;"></div>', unsafe_allow_html=True)
 
     # 5. Bottom Action Bar: Praktika Voice-First Pattern (No horizontal lines)
     audio_val = None
