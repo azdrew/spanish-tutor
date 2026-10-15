@@ -535,11 +535,9 @@ st.markdown("""
         outline: none !important;
     }
 
-    /* Completely strip all boxes, borders, outlines, backgrounds, and overflow clipping from stAudioInput */
+    /* Completely strip all boxes, borders, outlines, and backgrounds from stAudioInput containers */
     div[data-testid="stAudioInput"],
-    div[data-testid="stAudioInput"] *,
-    .stAudioInput,
-    .stAudioInput * {
+    div[data-testid="stAudioInput"] > div {
         background: transparent !important;
         background-color: transparent !important;
         border: none !important;
@@ -548,7 +546,7 @@ st.markdown("""
         overflow: visible !important;
     }
     
-    /* Push-to-Talk button: EXACT HORIZONTAL CENTER AT VERY BOTTOM - 100% Round Circle, No Clipping */
+    /* Push-to-Talk container: EXACT HORIZONTAL CENTER AT VERY BOTTOM */
     div[data-testid="stAudioInput"] {
         position: fixed !important;
         bottom: 20px !important;
@@ -558,8 +556,6 @@ st.markdown("""
         height: 76px !important;
         min-width: 76px !important;
         min-height: 76px !important;
-        max-width: 76px !important;
-        max-height: 76px !important;
         border-radius: 50% !important;
         overflow: visible !important;
         margin: 0 !important;
@@ -568,9 +564,6 @@ st.markdown("""
         display: flex !important;
         justify-content: center !important;
         align-items: center !important;
-        background: transparent !important;
-        background-color: transparent !important;
-        border: none !important;
     }
     div[data-testid="stAudioInput"] > div {
         display: flex !important;
@@ -580,14 +573,8 @@ st.markdown("""
         height: 76px !important;
         min-width: 76px !important;
         min-height: 76px !important;
-        max-width: 76px !important;
-        max-height: 76px !important;
         border-radius: 50% !important;
         overflow: visible !important;
-        background: transparent !important;
-        background-color: transparent !important;
-        border: none !important;
-        box-shadow: none !important;
         margin: 0 !important;
         padding: 0 !important;
         gap: 0 !important;
@@ -596,12 +583,11 @@ st.markdown("""
     .stAudioInput label {
         display: none !important;
     }
-    /* Hide waveform, timecode, instructions, delete button, and all non-action elements */
+    /* Hide waveform, timecode, instructions, and delete button */
     [data-testid="stAudioInputWaveSurfer"],
     [data-testid="stAudioInputWaveformTimeCode"],
     [data-testid="stAudioInput"] [data-testid="stAudioInputInstructions"],
-    [data-testid="stAudioInput"] [data-testid="stAudioInputDeleteButton"],
-    div[data-testid="stAudioInput"] > div > *:not(button[data-testid="stAudioInputActionButton"]) {
+    [data-testid="stAudioInput"] [data-testid="stAudioInputDeleteButton"] {
         display: none !important;
         visibility: hidden !important;
         width: 0 !important;
@@ -611,7 +597,7 @@ st.markdown("""
         border: none !important;
     }
 
-    /* Large Purple Push-to-Talk Circle */
+    /* Full Round Purple Push-to-Talk Circle with Transparent Background */
     button[data-testid="stAudioInputActionButton"] {
         width: 76px !important;
         height: 76px !important;
@@ -631,15 +617,16 @@ st.markdown("""
         justify-content: center !important;
         cursor: pointer !important;
         transition: transform 0.15s ease, background-color 0.2s ease !important;
-        margin: 0 !important;
+        margin: 0 auto !important;
         padding: 0 !important;
         overflow: visible !important;
         flex-shrink: 0 !important;
-        -webkit-appearance: none !important;
-        appearance: none !important;
+        visibility: visible !important;
+        opacity: 1 !important;
     }
     button[data-testid="stAudioInputActionButton"]:hover {
         background-color: #5B1BD0 !important;
+        background: #5B1BD0 !important;
         transform: scale(1.05) !important;
     }
     button[data-testid="stAudioInputActionButton"] svg {
@@ -647,6 +634,8 @@ st.markdown("""
         color: #FFFFFF !important;
         width: 34px !important;
         height: 34px !important;
+        display: block !important;
+        visibility: visible !important;
     }
 
     /* Left (+) button: ALIGNED TO FAR LEFT AT VERY BOTTOM */
