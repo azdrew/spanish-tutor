@@ -992,8 +992,10 @@ else:
     if "quick_prompt" in st.session_state and st.session_state.quick_prompt:
         user_input = st.session_state.quick_prompt
         st.session_state.quick_prompt = None
+        st.session_state.show_text_input = False
     elif text_val:
         user_input = text_val
+        st.session_state.show_text_input = False
     elif audio_val:
         user_input = audio_val
         input_is_audio = True
