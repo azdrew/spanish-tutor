@@ -390,6 +390,13 @@ st.markdown("""
         padding: 10px 18px !important;
         max-width: 82% !important;
         width: fit-content !important;
+        min-height: unset !important;
+        height: auto !important;
+        display: flex !important;
+        flex-direction: column !important;
+        justify-content: center !important;
+        align-items: center !important;
+        text-align: center !important;
         box-sizing: border-box !important;
         word-break: break-word !important;
         overflow-wrap: break-word !important;
@@ -397,15 +404,28 @@ st.markdown("""
         overflow: visible !important;
         box-shadow: 0 2px 8px rgba(112, 38, 237, 0.25) !important;
     }
+    div[data-testid="stChatMessage"]:has([data-testid="stChatMessageAvatarUser"]) [data-testid="stChatMessageContent"] > div,
+    div[data-testid="stChatMessage"]:has([data-testid="stChatMessageAvatarUser"]) [data-testid="stChatMessageContent"] [data-testid="stMarkdownContainer"] {
+        display: flex !important;
+        flex-direction: column !important;
+        justify-content: center !important;
+        align-items: center !important;
+        width: 100% !important;
+        margin: 0 !important;
+        padding: 0 !important;
+    }
     div[data-testid="stChatMessage"]:has([data-testid="stChatMessageAvatarUser"]) [data-testid="stChatMessageContent"] p {
         color: #FFFFFF !important;
         font-size: 1rem !important;
         font-weight: 500 !important;
         line-height: 1.4 !important;
         margin: 0 !important;
+        padding: 0 !important;
+        text-align: center !important;
         word-break: break-word !important;
         overflow-wrap: break-word !important;
         white-space: normal !important;
+        display: inline-block !important;
     }
 
     /* Tutor Message - LEFT Aligned, Light Gray / Off-white (#F3F4F6) */
@@ -641,6 +661,26 @@ st.markdown("""
         margin: 0 !important;
         padding: 0 !important;
         border: none !important;
+    }
+
+    /* Floating badge for stAudioInput error message */
+    div[data-testid="stAudioInput"] span:not(:empty),
+    div[data-testid="stAudioInput"] div:has(> button) + span {
+        position: absolute !important;
+        bottom: 86px !important;
+        left: 50% !important;
+        transform: translateX(-50%) !important;
+        background: rgba(31, 41, 55, 0.95) !important;
+        color: #FCA5A5 !important;
+        padding: 6px 14px !important;
+        border-radius: 12px !important;
+        font-size: 0.8rem !important;
+        white-space: nowrap !important;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.3) !important;
+        border: 1px solid rgba(239, 68, 68, 0.3) !important;
+        pointer-events: none !important;
+        text-align: center !important;
+        z-index: 10000 !important;
     }
 
     /* Full Round Purple Push-to-Talk Circle with Transparent Background */
