@@ -52,13 +52,13 @@ class AppConfig(BaseModel):
     """Application configuration schema."""
     app_name: str = "Spanish Tutor AI"
     version: str = "0.2.0"
-    model_name: str = "gemini-3.8-flash"
+    model_name: str = "gemini-flash-lite-latest"
     fallback_models: list[str] = [
-        "gemini-3.8-flash",
-        "gemini-3.7-flash",
-        "gemini-flash-latest",
         "gemini-flash-lite-latest",
-        "gemini-2.5-flash"
+        "gemini-3.5-flash-lite",
+        "gemini-3.5-flash",
+        "gemini-3.6-flash",
+        "gemini-3.8-flash"
     ]
     default_user_id: str = "default_user"
     base_firestore_path: str = "users/default_user"
@@ -265,7 +265,6 @@ def translate_to_english(text: str) -> Optional[str]:
     if not clean:
         return None
 
-    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key={GEMINI_API_KEY}"
     payload = {
         "contents": [{
             "parts": [{
@@ -278,22 +277,24 @@ def translate_to_english(text: str) -> Optional[str]:
         }
     }
 
-    req = urllib.request.Request(
-        url,
-        data=json.dumps(payload).encode("utf-8"),
-        headers={"Content-Type": "application/json"}
-    )
-    try:
-        with urllib.request.urlopen(req, timeout=15) as res:
-            if res.status == 200:
-                data = json.loads(res.read().decode("utf-8"))
-                candidates = data.get("candidates", [])
-                if candidates:
-                    parts = candidates[0].get("content", {}).get("parts", [])
-                    if parts and "text" in parts[0]:
-                        return parts[0]["text"].strip().strip('"').strip("'")
-    except Exception as e:
-        logger.error(f"Error translating Spanish to English: {e}")
+    for model in ["gemini-flash-lite-latest", "gemini-3.5-flash-lite"]:
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={GEMINI_API_KEY}"
+        req = urllib.request.Request(
+            url,
+            data=json.dumps(payload).encode("utf-8"),
+            headers={"Content-Type": "application/json"}
+        )
+        try:
+            with urllib.request.urlopen(req, timeout=10) as res:
+                if res.status == 200:
+                    data = json.loads(res.read().decode("utf-8"))
+                    candidates = data.get("candidates", [])
+                    if candidates:
+                        parts = candidates[0].get("content", {}).get("parts", [])
+                        if parts and "text" in parts[0]:
+                            return parts[0]["text"].strip().strip('"').strip("'")
+        except Exception as e:
+            logger.warning(f"Error translating Spanish with {model}: {e}")
     return None
 
 # -----------------------------------------------------------------------------
@@ -1162,7 +1163,8 @@ You must respond with a valid JSON object containing exactly two string fields:
                                     system_instruction=system_instruction,
                                     response_mime_type="application/json",
                                     max_output_tokens=2048,
-                                    temperature=0.7
+                                    temperature=0.7,
+                                    http_options=types.HttpOptions(timeout=15000)
                                 )
                             )
                             if resp.text:
