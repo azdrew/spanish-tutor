@@ -675,25 +675,6 @@ st.markdown("""
         background-color: #E5E7EB !important;
         transform: scale(1.05) !important;
     }
-
-    /* Return to voice button in text mode */
-    .st-key-toggle_voice_mode button {
-        border-radius: 50% !important;
-        width: 44px !important;
-        height: 44px !important;
-        min-width: 44px !important;
-        min-height: 44px !important;
-        padding: 0 !important;
-        margin: 0 !important;
-        display: flex !important;
-        align-items: center !important;
-        justify-content: center !important;
-        font-size: 1.25rem !important;
-        border: none !important;
-        background-color: #7026ED !important;
-        color: #FFFFFF !important;
-        box-shadow: 0 2px 8px rgba(112, 38, 237, 0.3) !important;
-    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -976,14 +957,8 @@ else:
             with col_mic:
                 audio_val = st.audio_input("Hablar", label_visibility="collapsed", key="push_to_talk")
         else:
-            # Text Mode: chat input on left, microphone button on right
-            col_chat, col_btn = st.columns([6, 1], vertical_alignment="center")
-            with col_chat:
-                text_val = st.chat_input("Escribe un mensaje en español...", key="chat_input_field")
-            with col_btn:
-                if st.button("🎙️", key="toggle_voice_mode", help="Volver a modo de voz"):
-                    st.session_state.show_text_input = False
-                    st.rerun()
+            # Text Mode: clean chat input
+            text_val = st.chat_input("Escribe un mensaje en español...", key="chat_input_field")
 
     user_input = None
     input_is_audio = False
