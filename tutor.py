@@ -437,6 +437,35 @@ st.markdown("""
         letter-spacing: -0.5px !important;
     }
 
+    /* Prevent tutor action buttons from stacking on mobile / responsive screens */
+    div[data-testid="stChatMessage"] div[data-testid="stHorizontalBlock"] {
+        display: flex !important;
+        flex-direction: row !important;
+        flex-wrap: nowrap !important;
+        align-items: center !important;
+        justify-content: flex-start !important;
+        gap: 8px !important;
+        width: auto !important;
+        min-width: 0 !important;
+        margin-top: 6px !important;
+        margin-bottom: 2px !important;
+    }
+    div[data-testid="stChatMessage"] div[data-testid="stHorizontalBlock"] > div[data-testid="column"] {
+        width: auto !important;
+        min-width: 0 !important;
+        max-width: none !important;
+        flex: 0 0 auto !important;
+        padding: 0 !important;
+        margin: 0 !important;
+    }
+    div[data-testid="stChatMessage"] div[class*="st-key-audio_btn_"],
+    div[data-testid="stChatMessage"] div[class*="st-key-trans_btn_"] {
+        width: auto !important;
+        min-width: 0 !important;
+        display: inline-flex !important;
+        align-items: center !important;
+    }
+
     /* Typing indicator bubble */
     .typing-bubble {
         display: inline-flex;
@@ -861,7 +890,7 @@ else:
 
                 if role == "assistant":
                     # Action buttons under tutor message: Speaker (🔊) next to Google Translate (文A)
-                    col_replay, col_trans, _spacer = st.columns([0.08, 0.08, 0.84], vertical_alignment="center")
+                    col_replay, col_trans, _spacer = st.columns([1, 1, 10], vertical_alignment="center")
 
                     with col_replay:
                         if st.button("🔊", key=f"audio_btn_{idx}", help="Reproducir voz del tutor"):
