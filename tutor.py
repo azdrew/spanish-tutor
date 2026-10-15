@@ -52,12 +52,13 @@ class AppConfig(BaseModel):
     """Application configuration schema."""
     app_name: str = "Spanish Tutor AI"
     version: str = "0.2.0"
-    model_name: str = "gemini-2.5-flash"
+    model_name: str = "gemini-3.8-flash"
     fallback_models: list[str] = [
-        "gemini-2.5-flash",
-        "gemini-flash-latest",
+        "gemini-3.8-flash",
         "gemini-3.7-flash",
-        "gemini-flash-lite-latest"
+        "gemini-flash-latest",
+        "gemini-flash-lite-latest",
+        "gemini-2.5-flash"
     ]
     default_user_id: str = "default_user"
     base_firestore_path: str = "users/default_user"
@@ -157,20 +158,35 @@ def extract_turn_json(raw_text: str) -> dict:
     """Extract structured JSON containing transcription and reply from Gemini output."""
     clean = raw_text.strip()
     # Strip markdown code blocks ```json ... ``` if present
-    match = re.search(r"```(?:json)?\s*(\{.*?\})\s*```", clean, re.DOTALL)
+    match = re.search(r"```(?:json)?\s*(\{.*\})\s*```", clean, re.DOTALL)
     if match:
-        clean = match.group(1)
+        clean = match.group(1).strip()
     else:
-        # Search for first JSON object enclosed in braces
+        # Search for first/outermost JSON object enclosed in braces
         brace_match = re.search(r"(\{.*\})", clean, re.DOTALL)
         if brace_match:
-            clean = brace_match.group(1)
+            clean = brace_match.group(1).strip()
     try:
         data = json.loads(clean)
         if isinstance(data, dict):
             return data
     except Exception as e:
-        logger.warning(f"Failed to parse JSON from Gemini response: {e}. Raw: {raw_text[:200]}")
+        logger.warning(f"JSON loads failed: {e}. Attempting regex field extraction...")
+        t_match = re.search(r'"transcription"\s*:\s*"((?:[^"\\]|\\.)*)"', clean)
+        r_match = re.search(r'"reply"\s*:\s*"((?:[^"\\]|\\.)*)"', clean)
+        if t_match or r_match:
+            try:
+                trans_val = t_match.group(1).encode().decode('unicode_escape') if t_match else ""
+            except Exception:
+                trans_val = t_match.group(1) if t_match else ""
+            try:
+                reply_val = r_match.group(1).encode().decode('unicode_escape') if r_match else clean
+            except Exception:
+                reply_val = r_match.group(1) if r_match else clean
+            return {
+                "transcription": trans_val,
+                "reply": reply_val
+            }
     return {"transcription": "", "reply": raw_text}
 
 def synthesize_speech(text: str, persona_name: str = "Gabby", speed_str: str = "1.0x") -> Optional[bytes]:
@@ -303,7 +319,7 @@ st.markdown("""
     }
     .main .block-container {
         padding-top: 1.25rem !important;
-        padding-bottom: 2.5rem !important;
+        padding-bottom: 8.5rem !important;
         max-width: 42rem !important;
         margin: 0 auto !important;
         scroll-behavior: smooth !important;
@@ -349,6 +365,7 @@ st.markdown("""
         padding: 4px 0 !important;
         gap: 0 !important;
         margin-bottom: 0.5rem !important;
+        width: 100% !important;
     }
     /* Hide all avatar containers */
     [data-testid="stChatMessageAvatarUser"],
@@ -362,16 +379,22 @@ st.markdown("""
     /* User Message - RIGHT Aligned, Vibrant Purple (#7026ED) */
     div[data-testid="stChatMessage"]:has([data-testid="stChatMessageAvatarUser"]) {
         display: flex !important;
-        flex-direction: row-reverse !important;
-        justify-content: flex-start !important;
+        flex-direction: row !important;
+        justify-content: flex-end !important;
+        width: 100% !important;
     }
     div[data-testid="stChatMessage"]:has([data-testid="stChatMessageAvatarUser"]) [data-testid="stChatMessageContent"] {
         background-color: #7026ED !important;
         color: #FFFFFF !important;
         border-radius: 20px 20px 4px 20px !important;
         padding: 10px 18px !important;
-        max-width: 80% !important;
-        margin-left: auto !important;
+        max-width: 82% !important;
+        width: fit-content !important;
+        box-sizing: border-box !important;
+        word-break: break-word !important;
+        overflow-wrap: break-word !important;
+        white-space: normal !important;
+        overflow: visible !important;
         box-shadow: 0 2px 8px rgba(112, 38, 237, 0.25) !important;
     }
     div[data-testid="stChatMessage"]:has([data-testid="stChatMessageAvatarUser"]) [data-testid="stChatMessageContent"] p {
@@ -380,12 +403,16 @@ st.markdown("""
         font-weight: 500 !important;
         line-height: 1.4 !important;
         margin: 0 !important;
+        word-break: break-word !important;
+        overflow-wrap: break-word !important;
+        white-space: normal !important;
     }
 
     /* Tutor Message - LEFT Aligned, Light Gray / Off-white (#F3F4F6) */
     div[data-testid="stChatMessage"]:not(:has([data-testid="stChatMessageAvatarUser"])) {
         display: flex !important;
         justify-content: flex-start !important;
+        width: 100% !important;
     }
     div[data-testid="stChatMessage"]:not(:has([data-testid="stChatMessageAvatarUser"])) [data-testid="stChatMessageContent"] {
         background-color: #F3F4F6 !important;
@@ -393,6 +420,12 @@ st.markdown("""
         border-radius: 20px 20px 20px 4px !important;
         padding: 12px 18px !important;
         max-width: 84% !important;
+        width: fit-content !important;
+        box-sizing: border-box !important;
+        word-break: break-word !important;
+        overflow-wrap: break-word !important;
+        white-space: normal !important;
+        overflow: visible !important;
         margin-right: auto !important;
     }
     div[data-testid="stChatMessage"]:not(:has([data-testid="stChatMessageAvatarUser"])) [data-testid="stChatMessageContent"] p {
@@ -400,6 +433,9 @@ st.markdown("""
         font-size: 1rem !important;
         line-height: 1.45 !important;
         margin-bottom: 0.25rem !important;
+        word-break: break-word !important;
+        overflow-wrap: break-word !important;
+        white-space: normal !important;
     }
 
     /* Highlighted vocabulary tags in tutor messages */
@@ -1047,7 +1083,7 @@ FEEDBACK RIGOR: {feedback_style}
 CRITICAL STRUCTURED OUTPUT REQUIREMENT:
 You must respond with a valid JSON object containing exactly two string fields:
 {{
-  "transcription": "Accurate verbatim transcription of what the user said (in Spanish or English). If the user provided text input, repeat the user text exactly.",
+  "transcription": "Full, complete, verbatim transcription of EVERYTHING the student said from start to finish in Spanish or English. Never omit, truncate, cut off, or summarize what the student said. If the user provided text input, repeat the user text exactly.",
   "reply": "Your Spanish response to the user following persona and feedback rules, including any [SAVE: word | translation] tag."
 }}
 """
@@ -1104,7 +1140,7 @@ You must respond with a valid JSON object containing exactly two string fields:
                                 config=types.GenerateContentConfig(
                                     system_instruction=system_instruction,
                                     response_mime_type="application/json",
-                                    max_output_tokens=500,
+                                    max_output_tokens=2048,
                                     temperature=0.7
                                 )
                             )
