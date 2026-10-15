@@ -603,9 +603,7 @@ st.markdown("""
 
     /* Completely strip all boxes, borders, outlines, and backgrounds from stAudioInput containers */
     div[data-testid="stAudioInput"],
-    div[data-testid="stAudioInput"] > div,
-    .stAudioInput,
-    .stAudioInput > div {
+    div[data-testid="stAudioInput"] > div {
         background: transparent !important;
         background-color: transparent !important;
         border: none !important;
@@ -613,23 +611,11 @@ st.markdown("""
         outline: none !important;
         overflow: visible !important;
     }
-    div[data-testid="stAudioInput"] *:not(button):not(svg):not(path) {
-        background: transparent !important;
-        background-color: transparent !important;
-        border: none !important;
-        box-shadow: none !important;
-        outline: none !important;
-    }
-    /* Hide any internal error or status spans so the button remains a pristine circle */
-    div[data-testid="stAudioInput"] span,
-    div[data-testid="stAudioInput"] p {
-        display: none !important;
-    }
     
     /* Push-to-Talk container: EXACT HORIZONTAL CENTER AT VERY BOTTOM */
     div[data-testid="stAudioInput"] {
         position: fixed !important;
-        bottom: 16px !important;
+        bottom: 20px !important;
         left: 50% !important;
         transform: translateX(-50%) !important;
         width: 76px !important;
