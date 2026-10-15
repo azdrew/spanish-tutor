@@ -360,12 +360,25 @@ st.markdown("""
     }
 
     /* 4. Chat Messages Styling (Praktika mobile bubbles) */
+    /* Tighten vertical spacing between consecutive chat messages in conversation */
+    div[data-testid="stVerticalBlock"]:has(> div[data-testid="element-container"] > div[data-testid="stChatMessage"]),
+    div[data-testid="stVerticalBlock"]:has(> div > div[data-testid="stChatMessage"]) {
+        gap: 0.45rem !important;
+    }
+
+    /* Remove outer container margins between chat messages */
+    div[data-testid="element-container"]:has(> div[data-testid="stChatMessage"]) {
+        margin: 0 !important;
+        padding: 0 !important;
+    }
+
     [data-testid="stChatMessage"] {
         background-color: transparent !important;
         border: none !important;
-        padding: 4px 0 !important;
+        padding: 2px 0 !important;
         gap: 0 !important;
-        margin-bottom: 0.5rem !important;
+        margin: 0 !important;
+        margin-bottom: 0.15rem !important;
         width: 100% !important;
     }
     /* Hide all avatar containers */
@@ -388,7 +401,7 @@ st.markdown("""
         background-color: #7026ED !important;
         color: #FFFFFF !important;
         border-radius: 20px 20px 4px 20px !important;
-        padding: 10px 18px !important;
+        padding: 8px 16px !important;
         max-width: 82% !important;
         width: fit-content !important;
         min-height: unset !important;
@@ -404,6 +417,7 @@ st.markdown("""
         white-space: normal !important;
         overflow: visible !important;
         box-shadow: 0 2px 8px rgba(112, 38, 237, 0.25) !important;
+        gap: 0 !important;
     }
     div[data-testid="stChatMessage"]:has([data-testid="stChatMessageAvatarUser"]) [data-testid="stChatMessageContent"] > div,
     div[data-testid="stChatMessage"]:has([data-testid="stChatMessageAvatarUser"]) [data-testid="stChatMessageContent"] [data-testid="stMarkdownContainer"] {
@@ -439,7 +453,7 @@ st.markdown("""
         background-color: #F3F4F6 !important;
         color: #1F2937 !important;
         border-radius: 20px 20px 20px 4px !important;
-        padding: 12px 18px !important;
+        padding: 9px 15px !important;
         max-width: 84% !important;
         width: fit-content !important;
         box-sizing: border-box !important;
@@ -448,12 +462,13 @@ st.markdown("""
         white-space: normal !important;
         overflow: visible !important;
         margin-right: auto !important;
+        gap: 2px !important;
     }
     div[data-testid="stChatMessage"]:not(:has([data-testid="stChatMessageAvatarUser"])) [data-testid="stChatMessageContent"] p {
         color: #1F2937 !important;
         font-size: 1rem !important;
         line-height: 1.45 !important;
-        margin-bottom: 0.25rem !important;
+        margin-bottom: 0 !important;
         word-break: break-word !important;
         overflow-wrap: break-word !important;
         white-space: normal !important;
@@ -478,12 +493,12 @@ st.markdown("""
         color: #6B7280 !important;
         font-size: 0.95rem !important;
         font-weight: 600 !important;
-        width: 30px !important;
-        height: 30px !important;
-        min-width: 30px !important;
-        min-height: 30px !important;
-        max-width: 30px !important;
-        max-height: 30px !important;
+        width: 28px !important;
+        height: 28px !important;
+        min-width: 28px !important;
+        min-height: 28px !important;
+        max-width: 28px !important;
+        max-height: 28px !important;
         padding: 0 !important;
         margin: 0 !important;
         border-radius: 6px !important;
@@ -511,13 +526,14 @@ st.markdown("""
         flex-wrap: nowrap !important;
         align-items: center !important;
         justify-content: flex-start !important;
-        gap: 8px !important;
+        gap: 6px !important;
         width: auto !important;
         min-width: 0 !important;
-        margin-top: 6px !important;
-        margin-bottom: 2px !important;
+        margin-top: 3px !important;
+        margin-bottom: 0 !important;
     }
-    div[data-testid="stChatMessage"] div[data-testid="stHorizontalBlock"] > div[data-testid="column"] {
+    div[data-testid="stChatMessage"] div[data-testid="stHorizontalBlock"] > div[data-testid="column"],
+    div[data-testid="stChatMessage"] div[data-testid="stHorizontalBlock"] > div[data-testid="stColumn"] {
         width: auto !important;
         min-width: 0 !important;
         max-width: none !important;
@@ -525,12 +541,27 @@ st.markdown("""
         padding: 0 !important;
         margin: 0 !important;
     }
+    div[data-testid="stChatMessage"] div[data-testid="stHorizontalBlock"] > div:empty {
+        display: none !important;
+        width: 0 !important;
+        height: 0 !important;
+        margin: 0 !important;
+        padding: 0 !important;
+    }
     div[data-testid="stChatMessage"] div[class*="st-key-audio_btn_"],
     div[data-testid="stChatMessage"] div[class*="st-key-trans_btn_"] {
         width: auto !important;
         min-width: 0 !important;
         display: inline-flex !important;
         align-items: center !important;
+    }
+
+    /* Hide wrapper space for invisible audio elements */
+    div[data-testid="element-container"]:has(audio[style*="display:none"]) {
+        display: none !important;
+        height: 0 !important;
+        margin: 0 !important;
+        padding: 0 !important;
     }
 
     /* Typing indicator bubble */
