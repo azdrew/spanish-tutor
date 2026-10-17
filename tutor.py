@@ -558,6 +558,14 @@ st.markdown("""
     }
 
     /* Student voice replay button (White icon inside purple bubble) */
+    div[data-testid="stChatMessage"]:has([data-testid="stChatMessageAvatarUser"]) div[class*="st-key-user_audio_btn_"] {
+        display: flex !important;
+        justify-content: center !important;
+        align-items: center !important;
+        width: 100% !important;
+        margin-top: 3px !important;
+        margin-bottom: 0 !important;
+    }
     div[data-testid="stChatMessage"]:has([data-testid="stChatMessageAvatarUser"]) div[class*="st-key-user_audio_btn_"] button {
         background: transparent !important;
         background-color: transparent !important;
@@ -573,7 +581,7 @@ st.markdown("""
         max-width: 28px !important;
         max-height: 28px !important;
         padding: 0 !important;
-        margin: 0 !important;
+        margin: 0 auto !important;
         border-radius: 6px !important;
         display: inline-flex !important;
         align-items: center !important;
@@ -584,11 +592,6 @@ st.markdown("""
     div[data-testid="stChatMessage"]:has([data-testid="stChatMessageAvatarUser"]) div[class*="st-key-user_audio_btn_"] button:hover {
         background-color: rgba(255, 255, 255, 0.2) !important;
         opacity: 1 !important;
-    }
-    div[data-testid="stChatMessage"]:has([data-testid="stChatMessageAvatarUser"]) div[data-testid="stHorizontalBlock"] {
-        justify-content: center !important;
-        width: 100% !important;
-        margin-top: 2px !important;
     }
 
     /* Hide wrapper space for invisible audio elements */
@@ -716,11 +719,17 @@ st.markdown("""
     .stAudioInput label {
         display: none !important;
     }
-    /* Hide waveform, timecode, instructions, and delete button */
+    /* Hide waveform, timecode, instructions, delete button, and Play/Pause buttons */
     [data-testid="stAudioInputWaveSurfer"],
     [data-testid="stAudioInputWaveformTimeCode"],
     [data-testid="stAudioInput"] [data-testid="stAudioInputInstructions"],
-    [data-testid="stAudioInput"] [data-testid="stAudioInputDeleteButton"] {
+    [data-testid="stAudioInput"] [data-testid="stAudioInputDeleteButton"],
+    [data-testid="stAudioInput"] button[aria-label*="Play" i],
+    [data-testid="stAudioInput"] button[aria-label*="Pause" i],
+    [data-testid="stAudioInput"] button[aria-label*="Reproducir" i],
+    [data-testid="stAudioInput"] button:not([data-testid="stAudioInputActionButton"]),
+    [data-testid="stAudioInput"] span:has(> button:not([data-testid="stAudioInputActionButton"])),
+    [data-testid="stAudioInput"] div:has(> button:not([data-testid="stAudioInputActionButton"])) {
         display: none !important;
         visibility: hidden !important;
         width: 0 !important;
@@ -728,6 +737,8 @@ st.markdown("""
         margin: 0 !important;
         padding: 0 !important;
         border: none !important;
+        opacity: 0 !important;
+        pointer-events: none !important;
     }
 
 
@@ -1116,11 +1127,9 @@ else:
 
                 elif role == "user" and msg.get("audio"):
                     # Student voice replay: Little speaker icon right inside the student's response bubble
-                    col_user_spk, _user_spacer = st.columns([1, 10], vertical_alignment="center")
-                    with col_user_spk:
-                        if st.button("🔊", key=f"user_audio_btn_{idx}", help="Escuchar tu grabación"):
-                            st.session_state[f"play_user_audio_{idx}"] = True
-                            st.rerun()
+                    if st.button("🔊", key=f"user_audio_btn_{idx}", help="Escuchar tu grabación"):
+                        st.session_state[f"play_user_audio_{idx}"] = True
+                        st.rerun()
 
                     # Seamless invisible audio player for student voice replay
                     if st.session_state.get(f"play_user_audio_{idx}", False):
