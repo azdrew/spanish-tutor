@@ -976,7 +976,7 @@ with st.sidebar:
 
     autoplay_voice = st.checkbox(
         "🔊 Auto-reproducir voz del tutor",
-        value=False,
+        value=True,
         help="Reproduce el audio automáticamente cuando Gabby responde."
     )
 
@@ -1111,7 +1111,7 @@ else:
                     if msg.get("audio") and st.session_state.get(f"play_audio_{idx}", False):
                         b64_audio = base64.b64encode(msg["audio"]).decode()
                         st.markdown(
-                            f'<audio autoplay style="display:none;"><source src="data:audio/wav;base64,{b64_audio}" type="audio/wav"></audio>',
+                            f'<audio autoplay playsinline style="display:none;"><source src="data:audio/wav;base64,{b64_audio}" type="audio/wav"></audio>',
                             unsafe_allow_html=True
                         )
                         st.session_state[f"play_audio_{idx}"] = False
@@ -1135,7 +1135,7 @@ else:
                     if st.session_state.get(f"play_user_audio_{idx}", False):
                         b64_audio = base64.b64encode(msg["audio"]).decode()
                         st.markdown(
-                            f'<audio autoplay style="display:none;"><source src="data:audio/wav;base64,{b64_audio}" type="audio/wav"></audio>',
+                            f'<audio autoplay playsinline style="display:none;"><source src="data:audio/wav;base64,{b64_audio}" type="audio/wav"></audio>',
                             unsafe_allow_html=True
                         )
                         st.session_state[f"play_user_audio_{idx}"] = False
@@ -1303,8 +1303,8 @@ You must respond with a valid JSON object containing exactly two string fields:
                             "audio": None,
                             "show_audio_player": False
                         }
-                        if autoplay_voice:
-                            with st.spinner("🎙️..."):
+                        if autoplay_voice or input_is_audio:
+                            with st.spinner("🎙️ Gabby está hablando..."):
                                 audio_bytes = synthesize_speech(
                                     clean_text,
                                     persona_name=st.session_state.selected_persona,
