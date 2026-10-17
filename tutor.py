@@ -549,11 +549,46 @@ st.markdown("""
         padding: 0 !important;
     }
     div[data-testid="stChatMessage"] div[class*="st-key-audio_btn_"],
-    div[data-testid="stChatMessage"] div[class*="st-key-trans_btn_"] {
+    div[data-testid="stChatMessage"] div[class*="st-key-trans_btn_"],
+    div[data-testid="stChatMessage"] div[class*="st-key-user_audio_btn_"] {
         width: auto !important;
         min-width: 0 !important;
         display: inline-flex !important;
         align-items: center !important;
+    }
+
+    /* Student voice replay button (White icon inside purple bubble) */
+    div[data-testid="stChatMessage"]:has([data-testid="stChatMessageAvatarUser"]) div[class*="st-key-user_audio_btn_"] button {
+        background: transparent !important;
+        background-color: transparent !important;
+        border: none !important;
+        box-shadow: none !important;
+        color: #FFFFFF !important;
+        font-size: 0.95rem !important;
+        font-weight: 600 !important;
+        width: 28px !important;
+        height: 28px !important;
+        min-width: 28px !important;
+        min-height: 28px !important;
+        max-width: 28px !important;
+        max-height: 28px !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        border-radius: 6px !important;
+        display: inline-flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        cursor: pointer !important;
+        opacity: 0.9 !important;
+    }
+    div[data-testid="stChatMessage"]:has([data-testid="stChatMessageAvatarUser"]) div[class*="st-key-user_audio_btn_"] button:hover {
+        background-color: rgba(255, 255, 255, 0.2) !important;
+        opacity: 1 !important;
+    }
+    div[data-testid="stChatMessage"]:has([data-testid="stChatMessageAvatarUser"]) div[data-testid="stHorizontalBlock"] {
+        justify-content: center !important;
+        width: 100% !important;
+        margin-top: 2px !important;
     }
 
     /* Hide wrapper space for invisible audio elements */
@@ -876,6 +911,9 @@ if "selected_persona" not in st.session_state:
 if "show_text_input" not in st.session_state:
     st.session_state.show_text_input = False
 
+if "audio_turn_count" not in st.session_state:
+    st.session_state.audio_turn_count = 0
+
 # -----------------------------------------------------------------------------
 # Sidebar: Settings & Controls
 # -----------------------------------------------------------------------------
@@ -1076,6 +1114,23 @@ else:
                             unsafe_allow_html=True
                         )
 
+                elif role == "user" and msg.get("audio"):
+                    # Student voice replay: Little speaker icon right inside the student's response bubble
+                    col_user_spk, _user_spacer = st.columns([1, 10], vertical_alignment="center")
+                    with col_user_spk:
+                        if st.button("🔊", key=f"user_audio_btn_{idx}", help="Escuchar tu grabación"):
+                            st.session_state[f"play_user_audio_{idx}"] = True
+                            st.rerun()
+
+                    # Seamless invisible audio player for student voice replay
+                    if st.session_state.get(f"play_user_audio_{idx}", False):
+                        b64_audio = base64.b64encode(msg["audio"]).decode()
+                        st.markdown(
+                            f'<audio autoplay style="display:none;"><source src="data:audio/wav;base64,{b64_audio}" type="audio/wav"></audio>',
+                            unsafe_allow_html=True
+                        )
+                        st.session_state[f"play_user_audio_{idx}"] = False
+
         # Clear anchor so tutor response and action buttons always scroll above the push-to-talk button
         st.markdown('<div id="chat-bottom-anchor" style="height: 125px; width: 100%; pointer-events: none; margin: 0; padding: 0;"></div>', unsafe_allow_html=True)
 
@@ -1097,7 +1152,7 @@ else:
                     st.session_state.show_text_input = True
                     st.rerun()
             with col_mic:
-                audio_val = st.audio_input("Hablar", label_visibility="collapsed", key="push_to_talk")
+                audio_val = st.audio_input("Hablar", label_visibility="collapsed", key=f"push_to_talk_{st.session_state.audio_turn_count}")
         else:
             # Text Mode: clean chat input
             text_val = st.chat_input("Escribe un mensaje en español...", key="chat_input_field")
@@ -1214,9 +1269,18 @@ You must respond with a valid JSON object containing exactly two string fields:
                         if input_is_audio:
                             user_transcription = turn_data.get("transcription", "").strip() or "🎙️ [Audio grabado]"
                             user_msg_placeholder.markdown(user_transcription)
-                            st.session_state.messages.append({"role": "user", "content": user_transcription})
+                            st.session_state.messages.append({
+                                "role": "user",
+                                "content": user_transcription,
+                                "audio": audio_val.getvalue()
+                            })
+                            st.session_state.audio_turn_count += 1
                         else:
-                            st.session_state.messages.append({"role": "user", "content": user_input})
+                            st.session_state.messages.append({
+                                "role": "user",
+                                "content": user_input,
+                                "audio": None
+                            })
 
                         # Resolve assistant response
                         assistant_raw_reply = turn_data.get("reply", "").strip() or raw_response_text
@@ -1247,4 +1311,5 @@ You must respond with a valid JSON object containing exactly two string fields:
                     else:
                         if input_is_audio:
                             user_msg_placeholder.markdown("⚠️ _No se pudo procesar el audio._")
+                            st.session_state.audio_turn_count += 1
                         st.error(f"Error communicating with Gemini: {last_err}")
