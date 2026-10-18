@@ -8,61 +8,63 @@
 * **Database / Cloud State:** Firebase Cloud Firestore (`google-cloud-firestore`)[cite: 2]
 * **Deployment & Execution:** Hosted on macOS (VS Code) -> GitHub Repository -> Streamlit Community Cloud / Mobile Browser via local Wi-Fi[cite: 2]
 
-## 2. API Configuration & Secrets Management
+### 2. API Configuration & Secrets Management
 
-* **SDK Package:** `google-genai` (Connecting to `gemini-2.5-flash`)
-* **Secret Keys:** `GEMINI_API_KEY`, `PEXELS_API_KEY`, and `firebase-key.json` loaded via `.env` and `st.secrets`[cite: 2]. Strictly excluded via `.gitignore`[cite: 2].
+* **SDK Package & LLM Models:** `google-genai` connecting to `gemini-flash-lite-latest` (primary), with resilient fallbacks to `gemini-3.5-flash-lite` and `gemini-3.8-flash`. Structured JSON output guarantees accurate audio transcription and clean conversational responses without 503/429 hang loops.
+* **Speech Engine (TTS):** Microsoft Edge Neural TTS (`edge-tts`) as primary speech engine (`es-MX-DaliaNeural` for Gabby, `es-MX-JorgeNeural` for Mateo). Provides unlimited requests (zero daily quota caps), natural human-sounding Latin American Spanish prosody, and speed pacing support (`-15%` for 0.8x, `+0%` for 1.0x, `+15%` for 1.2x). Auto-falls back to Google Translate TTS (`translate_tts`, 0.3s latency) if network drops occur.
+* **Secret Keys:** `GEMINI_API_KEY`, `PEXELS_API_KEY`, and `firebase-key.json` loaded via `.env` and `st.secrets`. Strictly excluded via `.gitignore`.
 
 ## 3. Database Schema (Firebase Firestore)
 
-* **Base Reference:** `users/default_user/`[cite: 2]
+* **Base Reference:** `users/default_user/`
 * **Subcollection 1:** `words/` (Document ID = Spanish Word)
-    * Fields: `english`, `box` (1-5), `last_reviewed`, `next_review`, `image_url`[cite: 2]
+    * Fields: `english`, `box` (1-5), `last_reviewed`, `next_review`, `image_url`
 * **Subcollection 2:** `chat_sessions/` (Document ID = Timestamp ID)
-    * Fields: `timestamp`, `title`, `messages` array[cite: 2]
-* **Subcollection 3:** `user_settings/` (Document ID = `config`)[cite: 2]
-    * Fields: `tutor_persona`, `feedback_style`, `speech_speed`, `streak_days`[cite: 2]
+    * Fields: `timestamp`, `title`, `messages` array
+* **Subcollection 3:** `user_settings/` (Document ID = `config`)
+    * Fields: `tutor_persona`, `feedback_style`, `speech_speed`, `streak_days`
 
 ## 4. Tutor Personas & Operational Rules
 
-* **Personas:** Gabriella "Gabby" (Default, warm, female voice) / Mateo (Secondary, male voice)[cite: 2].
-* **Language Pacing:** Speak primarily in Latin American Spanish; switch briefly to English for major grammar or structural corrections[cite: 2].
-* **Feedback Rigor Settings:** Controlled via sidebar (Soft / Balanced / Strict)[cite: 2].
-* **Automated Word Tracking:** Gemini appends hidden `[SAVE: spanish_word]` tags when the user struggles[cite: 2]. Regex strips tags for UI display and upserts words to Firestore `words/` subcollection[cite: 2].
-* **Silence Helper:** "💡 What to say?" hint chip opens suggestions when tapped or after 5 seconds of silence[cite: 2].
+* **Personas:** Gabriella "Gabby" (Default, warm, female voice: `es-MX-DaliaNeural`) / Mateo (Secondary, patient male voice: `es-MX-JorgeNeural`).
+* **Language Pacing:** Speak primarily in Latin American Spanish; switch briefly to English for major grammar or structural corrections.
+* **Feedback Rigor Settings:** Controlled via sidebar (Soft / Balanced / Strict).
+* **Automated Word Tracking:** Gemini appends hidden `[SAVE: spanish_word | english_translation]` tags when the user struggles. Regex strips tags for UI display, and an asynchronous daemon thread (`threading.Thread`) upserts words to Firestore `words/` in the background without blocking the UI or audio playback.
+* **Silence Helper:** "💡 What to say?" hint chip opens suggestions when tapped or after 5 seconds of silence.
 
 ## 5. Visual UI Structure & Layout (`tutor.py`)
 
 ### Sidebar (`st.sidebar`)
 
-* Tutor Persona Selector (`assets/gabby.png`, `assets/mateo.png`)[cite: 2]
-* Speech Speed slider and Feedback Rigor controls[cite: 2]
-* User streak counter (🔥 X Days) and level display[cite: 2]
-* Past chat history session selector[cite: 2]
-* Pre-made Starter Deck Importer (`config.yaml`)[cite: 2]
+* Tutor Persona Selector (`assets/gabby.png`, `assets/mateo.png`)
+* Speech Speed slider (`0.8x`, `1.0x`, `1.2x`) and Feedback Rigor controls
+* User streak counter (🔥 X Days) and level display
+* Past chat history session selector
+* Pre-made Starter Deck Importer (`config.yaml`)
 
-### Tab 1 ("💬 Practice")
+### Tab 1 ("💬 Practice") — Praktika Voice-First Experience
 
 * **Header Auto-Collapse:**
-    * Initial state (<2 user turns): Displays 16:9 hero banner and tutor title card[cite: 2].
-    * Active state (>=2 user turns): Unmounts large hero image and replaces it with a slim, single-row status bar (avatar thumbnail + level) to maximize vertical space.
+    * Initial state (<2 user turns): Displays full-width 16:9 hero banner and tutor title card.
+    * Active state (>=2 user turns): Unmounts large hero image and replaces it with a slim, single-row status bar (avatar thumbnail + level badge) to maximize vertical chat space.
 * **Text-Message Conversational Feed:**
-    * Chat history renders as alternating left/right speech bubbles (`st.chat_message`) using 1:1 avatars for Gabby/Mateo and the user[cite: 2].
-    * Audio display widgets are replaced with the user's transcribed spoken text for readable, message-style chat logs.
-    * Assistant bubbles feature inline 🔊 TTS Audio replay and 🈳 Translation toggles[cite: 2].
-* **Bottom Action Bar (Praktika Voice-First Pattern):**
-    * Default Mode: Push-to-talk microphone (`st.audio_input`)[cite: 2] spans the primary bottom bar with a small `✏️` pencil icon button. Prevents virtual keyboards from opening on mobile.
-    * Text Mode: Tapping `✏️` reveals `st.chat_input` and a `🎙️` button to toggle back to voice-only input.
+    * Chat history renders as asymmetric speech bubbles (`st.chat_message`):
+        * **Assistant (Gabby):** Soft gray card (`#F3F4F6`) with dark slate typography.
+        * **User (Student):** Sleek violet pill (`#7C3AED`) with white typography, right-aligned.
+    * Audio display widgets are replaced with the user's transcribed spoken text for readable, message-style chat logs, featuring an inline speaker icon inside the student bubble for optional audio replay.
+    * Assistant bubbles feature inline 🔊 TTS Audio replay and 文A Google Translate toggles in a clean horizontal row.
+    * **Centered Typing Indicator:** A 3-dot pulse animation (`•••`) horizontally and vertically centered directly within Gabby's chat bubble during response generation.
+* **Praktika Bottom Action Bar:**
+    * **Push-to-Talk Microphone Button:** Pinned to viewport bottom center (`bottom: 20px; left: 50%; transform: translateX(-50%)`). Stripped of all bounding boxes, borders, and labels to leave a focused, 76px circular mic button.
+    * **Left Floating `+` Button:** Fixed at bottom left (`bottom: 28px`), allowing users to toggle a text input bar (`st.chat_input`) with automatic dismissal on submit.
+    * **Viewport Clearance:** Bottom padding (`9.5rem`) on `stMainBlockContainer` preventing mobile keyboard clipping and ensuring chat always scrolls cleanly above floating controls.
 
-### Tab 2 ("🎴 Flashcards")
+### Tab 2 ("🎴 Flashcards") — Checkpoint 2 Roadmap
 
-* Leitner Box SRS filtering (renders words due for review today: `next_review <= today`)[cite: 2].
-* Action Controls: `[✅ Got It Right]`, `[❌ Got It Wrong]`, `[🤷 Pass / Don't Know]`[cite: 2].
-* Dynamic Image Fetching: Pexels API backfills missing `image_url` fields in Firestore[cite: 2].
-* Spoken "Say the Word" Challenges: Audio interjections evaluated by Gemini[cite: 2].
-
-
-UI Layout
+* Leitner Box SRS filtering (renders words due for review today: `next_review <= today`).
+* Action Controls: `[✅ Got It Right]`, `[❌ Got It Wrong]`, `[🤷 Pass / Don't Know]`.
+* Dynamic Image Fetching: Pexels API backfills missing `image_url` fields in Firestore.
+* Spoken "Say the Word" Challenges: Audio interjections evaluated by Gemini.
 
 ```text
  ========================================================================
@@ -89,30 +91,27 @@ UI Layout
 |                CONVERSATIONAL CHAT FEED (st.chat_message)            |
 |                                                                      |
 |   +-------------------------------------------------------------+    |
-|   | 👤 User Speech Bubble (Right-aligned text from audio)        |    |
+|   | 👤 User Speech Bubble (Right-aligned violet #7C3AED)        |    |
 |   | "Hola Gabby, ¿cómo estás hoy? Quiero practicar español."     |    |
+|   | [ 🔊 Replay My Voice ]                                      |    |
 |   +-------------------------------------------------------------+    |
 |                                                                      |
 |   +-------------------------------------------------------------+    |
-|   | 👩‍🏫 Gabby Speech Bubble (Left-aligned text response)          |    |
+|   | 👩‍🏫 Gabby Speech Bubble (Left-aligned soft gray #F3F4F6)      |    |
 |   | "¡Hola! Estoy muy bien. ¿Qué hiciste esta mañana?"          |    |
-|   | [ 🔊 Play Audio ]  [ 🈳 Translate ]                         |    |
+|   | [ 🔊 Escuchar ]   [ 文A Traducir ]                           |    |
 |   +-------------------------------------------------------------+    |
+|                                                                      |
+|   (While generating response: centered typing pulse [ • • • ])       |
 |                                                                      |
 +----------------------------------------------------------------------+
 |                                                                      |
-|               PRAKTIKA VOICE-FIRST BOTTOM ACTION BAR                 |
+|               PRAKTIKA VOICE-FIRST FLOATING CONTROLS                 |
 |                                                                      |
-|  DEFAULT MODE: (not st.session_state.show_text_input)                |
-|  +---------------------------------------------------+ +-----------+  |
-|  |  🎙️ st.audio_input("Hablar", label="collapsed")   | | [ ✏️ Edit ]|  |
-|  +---------------------------------------------------+ +-----------+  |
-|         (Dominates width, prevents keyboard pop-up)      (col_toggle) |
-|                                                                      |
-|  TEXT FALLBACK MODE: (st.session_state.show_text_input == True)      |
-|  +---------------------------------------------------+ +-----------+  |
-|  |  ⌨️ st.chat_input("Escribe un mensaje...")         | | [ 🎙️ Mic ] |  |
-|  +---------------------------------------------------+ +-----------+  |
+|  +-------------------+       +--------------------+                  |
+|  | [ + ] Toggle Text |       |  ( 🎙️ ) Push-To-Talk|                  |
+|  +-------------------+       +--------------------+                  |
+|  (Fixed Bottom-Left)         (Fixed Bottom-Center)                   |
 |                                                                      |
 +----------------------------------------------------------------------+
 ```

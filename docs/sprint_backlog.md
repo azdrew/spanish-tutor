@@ -27,9 +27,13 @@
 
 **Tasks:**
 * [x] **Task 1.6.1:** Add turn-counter state logic in `tutor.py` to auto-collapse the hero banner after 2 user turns.
-* [x] **Task 1.6.2:** Swap user raw audio players for transcribed speech text bubbles in `st.chat_message("user")`[cite: 4].
-* [x] **Task 1.6.3:** Implement `show_text_input` toggle state in bottom bar (`st.audio_input` default + `✏️` toggle button)[cite: 2].
+* [x] **Task 1.6.2:** Swap user raw audio players for transcribed speech text bubbles in `st.chat_message("user")` with inline audio replay.
+* [x] **Task 1.6.3:** Implement `show_text_input` toggle state in bottom bar (`st.audio_input` default + `+` toggle button with auto-dismiss).
 * [x] **Task 1.6.4:** Update Gemini generation prompt to return structured JSON containing both `transcription` and `reply`.
+* [x] **Task 1.6.5:** Vertically and horizontally center 3-dot typing pulse animation inside tutor chat bubble without nested borders.
+* [x] **Task 1.6.6:** Move Firestore vocabulary saving to asynchronous daemon threads (`threading.Thread`) to eliminate multi-turn UI rendering freezes.
+* [x] **Task 1.6.7:** Replace quota-limited Gemini TTS with Microsoft Edge Neural TTS (`edge-tts` — `es-MX-DaliaNeural`), adding Google Translate TTS fallback for unlimited high-fidelity speech.
+* [x] **Task 1.6.8:** Pin circular Push-to-Talk button to viewport bottom center with `9.5rem` viewport clearance to prevent mobile keyboard overlapping.
 
 ---
 

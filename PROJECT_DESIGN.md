@@ -89,53 +89,29 @@
 
 ```
 
-### Tab 1: 💬 Practice Session (Conversation & Audio)
+### Tab 1: 💬 Practice Session (Conversation & Audio) — Praktika-Inspired Voice-First
 
-* **Avatar & Chat Feed:** Top avatar preview of selected tutor (Gabby/Mateo) with chat bubbles rendering past messages (`st.chat_message`).
+* **Avatar & Auto-Collapsing Header:** Top 16:9 banner preview of selected tutor (Gabby/Mateo) for onboarding (<2 user turns), automatically collapsing into a slim, space-efficient status bar (avatar thumbnail + level badge) on turn 2+ to maximize chat viewport.
+* **Chat Feed & Asymmetric Bubbles:** Chat history rendered via custom CSS-enhanced `st.chat_message`:
+  * **Gabby (Assistant):** Left-aligned soft gray card (`#F3F4F6`).
+  * **Student (User):** Right-aligned modern violet card (`#7C3AED`) with white text and an inline speaker icon inside the bubble to replay user recordings without large HTML5 audio players.
+* **Centered Typing Indicator:** Animated 3-dot pulse (`•••`) centered horizontally and vertically within Gabby's chat bubble during response formulation.
+* **Inline Response Action Row:** Underneath tutor replies:
+  * 🔊 **Play Audio:** Plays spoken audio via high-fidelity neural voice.
+  * 文A **Translate:** Toggles English translation card.
+* **Bottom Floating Action Bar:**
+  * **Push-to-Talk Button:** Fixed circular 76px microphone button centered at the bottom of the viewport (`position: fixed; bottom: 20px; left: 50%`), stripped of bounding boxes and labels for pure one-tap voice interaction.
+  * **Left `+` Button:** Fixed at bottom left (`bottom: 28px`), toggling a dismissible text input field (`st.chat_input`) for typing mode.
+  * **Viewport Clearance:** `9.5rem` bottom padding on the main block container to eliminate overlapping on mobile browsers and virtual keyboards.
+* **Asynchronous Vocabulary Logging:** Model emits `[SAVE: spanish_word | english_translation]` tags; background daemon thread (`threading.Thread`) saves cards to Firestore asynchronously without freezing the chat UI.
 
-
-* **Audio Player & Translation Toggles:** Assistant speech bubbles feature inline action buttons:
-* 🔊 **Play Audio:** Auto-plays spoken response via TTS.
-
-
-* 🈳 **Translate:** Toggles English translation view.
-
-
-
-
-* **Prompt Helper / Hint Chip:** Floating **"💡 What to say?"** button that opens a suggestion box when tapped or after 5 seconds of silence.
-
-
-* **Bottom Input Bar (Push-to-Talk):**
-* `st.audio_input` microphone widget allowing users to tap to record, review/delete, and send.
-
-
-* Option menu (`+` button) for extra tools (e.g., Quick Grammar Reference).
-
-
-
-
-* **Automated Word Log:** Background regex parsing intercepts `[SAVE: spanish_word]` tags from model output, strips them from the UI, and automatically saves the word to Firestore.
-
-
-
-### Tab 2: 🎴 Flashcard Deck (Leitner SRS & Spoken Challenges)
+### Tab 2: 🎴 Flashcard Deck (Leitner SRS & Spoken Challenges) — Checkpoint 2
 
 * **Leitner Box SRS Filtering:** Displays only words due for review today based on Box 1–5 scheduling intervals.
-
-
 * **Card View & Action Row:** Expander cards displaying Spanish/English terms, mastery levels, and dynamic **Pexels thumbnail images**.
-
-
 * **Response Controls:** Responsive action row featuring **[✅ Got It Right]**, **[❌ Got It Wrong]**, and **[🤷 Pass / Don't Know]**.
-
-
 * **Duolingo-Style Spoken Challenges:** Intermittent audio challenges prompting the user to speak Spanish translations aloud, evaluated by Gemini.
-
-
 * **Pre-Made Starter Decks:** Importer widget to merge preset topics (*Numbers*, *Days & Months*, *Body Parts*) into Firestore.
-
-
 
 ---
 
@@ -143,24 +119,14 @@
 
 | Component | Technology / Library | Purpose |
 | --- | --- | --- |
-| **Language & UI Framework** | Python 3.x, Streamlit (`tutor.py`) | Single-file responsive web dashboard.
-
- |
-| **LLM Engine & SDK** | `google-genai` (`gemini-3.7-flash` / `gemini-flash-latest`) | Fast, low-latency conversational audio and evaluation.
-
- |
-| **Database & Cloud State** | Firebase Cloud Firestore (`google-cloud-firestore`) | NoSQL storage for `words/`, `chat_sessions/`, and `user_settings/` subcollections.
-
- |
-| **Configuration & Logging** | `pydantic-settings`, `pyyaml`, `loguru` | Type-safe configuration management and structured logging.
-
- |
-| **Media API** | Pexels REST API | Dynamic image fetching for flashcard visual cues.
-
- |
-| **Secrets Management** | `.env`, `firebase-key.json`, and `st.secrets` | API keys excluded from version control via `.gitignore`.
-
- |
+| **Language & UI Framework** | Python 3.x, Streamlit (`tutor.py`) | Single-file responsive Praktika-inspired web app. |
+| **LLM Engine & SDK** | `google-genai` (`gemini-flash-lite-latest`, fallbacks: `gemini-3.5-flash-lite`, `gemini-3.8-flash`) | Fast, structured JSON multimodal audio transcription and conversational responses. |
+| **Voice Engine (TTS)** | Microsoft Edge Neural TTS (`edge-tts` — `es-MX-DaliaNeural` / `es-MX-JorgeNeural`) | 100% free, unlimited high-fidelity Latin American Spanish neural speech with speed pacing. |
+| **Fallback Speech Engine** | Google Translate TTS (`translate_tts`) | Zero-latency (0.3s) failsafe voice generation with infinite quota. |
+| **Database & Cloud State** | Firebase Cloud Firestore (`google-cloud-firestore`) | Asynchronous background persistence for `words/`, `chat_sessions/`, and `user_settings/`. |
+| **Configuration & Logging** | `pydantic-settings`, `pyyaml`, `loguru` | Type-safe configuration management and structured logging. |
+| **Media API** | Pexels REST API | Dynamic image fetching for flashcard visual cues (Checkpoint 2). |
+| **Secrets Management** | `.env`, `firebase-key.json`, and `st.secrets` | API keys excluded from version control via `.gitignore`. |
 
 ---
 
