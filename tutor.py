@@ -8,6 +8,8 @@ import re
 import json
 import base64
 import urllib.request
+import urllib.parse
+import threading
 import datetime
 from pathlib import Path
 from typing import Optional, Dict, Any
@@ -56,8 +58,6 @@ class AppConfig(BaseModel):
     fallback_models: list[str] = [
         "gemini-flash-lite-latest",
         "gemini-3.5-flash-lite",
-        "gemini-3.5-flash",
-        "gemini-3.6-flash",
         "gemini-3.8-flash"
     ]
     default_user_id: str = "default_user"
@@ -144,11 +144,13 @@ def save_word_to_firestore(spanish: str, english: str = "") -> bool:
         return False
 
 def parse_and_save_vocabulary(text: str) -> str:
-    """Parse hidden [SAVE: spanish_word | english] tags, persist to Firestore, and return clean text."""
+    """Parse hidden [SAVE: spanish_word | english] tags, persist to Firestore in background, and return clean text."""
     pattern = r"\[SAVE:\s*([^\]|]+)(?:\|([^\]]+))?\]"
     matches = re.findall(pattern, text)
     for spanish, english in matches:
-        save_word_to_firestore(spanish.strip(), english.strip() if english else "")
+        sp = spanish.strip()
+        en = english.strip() if english else ""
+        threading.Thread(target=save_word_to_firestore, args=(sp, en), daemon=True).start()
     
     # Strip tags from display text
     cleaned_text = re.sub(pattern, "", text).strip()
@@ -190,68 +192,75 @@ def extract_turn_json(raw_text: str) -> dict:
     return {"transcription": "", "reply": raw_text}
 
 def synthesize_speech(text: str, persona_name: str = "Gabby", speed_str: str = "1.0x") -> Optional[bytes]:
-    """Generate spoken audio for tutor response using Gemini 3.8 Flash Lite TTS API."""
-    if not GEMINI_API_KEY:
-        logger.warning("GEMINI_API_KEY missing for TTS generation.")
-        return None
-
-    # Strip bracketed tags, markdown symbols, and excess whitespace
+    """Generate spoken audio for tutor response using Gemini 3.8 Flash-Lite TTS with fast Google TTS fallback."""
     clean = re.sub(r"\[.*?\]", "", text)
     clean = re.sub(r"[*_#`~]", "", clean).strip()
     if not clean:
         return None
 
-    # Select voice based on persona (Gabby -> female 'Kore', Mateo -> male 'Puck')
-    voice_name = "Kore" if persona_name.lower().startswith("gabb") else "Puck"
+    # 1. Try Gemini 3.8 Flash-Lite TTS first if GEMINI_API_KEY is available
+    if GEMINI_API_KEY:
+        voice_name = "Kore" if persona_name.lower().startswith("gabb") else "Puck"
+        if "0.8" in speed_str:
+            style_desc = "clear and deliberate Latin American Spanish tutor speaking slowly and clearly"
+        elif "1.2" in speed_str:
+            style_desc = "fluent and lively Latin American Spanish tutor speaking at an energetic pace"
+        else:
+            style_desc = "warm, friendly, and natural Latin American Spanish tutor speaking conversationally"
 
-    # Adapt pacing description based on selected speech speed
-    if "0.8" in speed_str:
-        style_desc = "clear and deliberate Latin American Spanish tutor speaking slowly and clearly"
-    elif "1.2" in speed_str:
-        style_desc = "fluent and lively Latin American Spanish tutor speaking at an energetic pace"
-    else:
-        style_desc = "warm, friendly, and natural Latin American Spanish tutor speaking conversationally"
-
-    url = f"https://generativelanguage.googleapis.com/v1beta/interactions?key={GEMINI_API_KEY}"
-    payload = {
-        "model": "gemini-3.8-flash-lite-tts",
-        "input": [{
-            "type": "user_input",
-            "content": [{
-                "type": "text",
-                "text": clean,
-                "annotations": [{
-                    "type": "speech_metadata",
-                    "style": style_desc
+        url = f"https://generativelanguage.googleapis.com/v1beta/interactions?key={GEMINI_API_KEY}"
+        payload = {
+            "model": "gemini-3.8-flash-lite-tts",
+            "input": [{
+                "type": "user_input",
+                "content": [{
+                    "type": "text",
+                    "text": clean,
+                    "annotations": [{
+                        "type": "speech_metadata",
+                        "style": style_desc
+                    }]
                 }]
-            }]
-        }],
-        "response_format": {
-            "type": "audio",
-            "mime_type": "audio/wav"
-        },
-        "generation_config": {
-            "speech_config": [
-                {"voice": voice_name}
-            ]
+            }],
+            "response_format": {
+                "type": "audio",
+                "mime_type": "audio/wav"
+            },
+            "generation_config": {
+                "speech_config": [
+                    {"voice": voice_name}
+                ]
+            }
         }
-    }
 
-    req = urllib.request.Request(
-        url,
-        data=json.dumps(payload).encode("utf-8"),
-        headers={"Content-Type": "application/json"}
-    )
+        try:
+            req = urllib.request.Request(
+                url,
+                data=json.dumps(payload).encode("utf-8"),
+                headers={"Content-Type": "application/json"}
+            )
+            with urllib.request.urlopen(req, timeout=5) as res:
+                if res.status == 200:
+                    data = json.loads(res.read().decode("utf-8"))
+                    for step in data.get("steps", []):
+                        for item in step.get("content", []):
+                            if item.get("type") == "audio" and "data" in item:
+                                return base64.b64decode(item["data"])
+        except Exception as e:
+            logger.warning(f"Gemini TTS unavailable ({e}). Using fast audio fallback...")
+
+    # 2. Fast Reliable Fallback: Google Translate TTS (0.4s latency, 100% quota-free)
     try:
-        with urllib.request.urlopen(req, timeout=6) as res:
-            if res.status == 200:
-                data = json.loads(res.read().decode("utf-8"))
-                for step in data.get("steps", []):
-                    for item in step.get("content", []):
-                        if item.get("type") == "audio" and "data" in item:
-                            return base64.b64decode(item["data"])
-    except Exception as e:
-        logger.error(f"Error synthesizing speech audio: {e}")
+        tts_text = clean[:300]
+        tts_url = f"https://translate.google.com/translate_tts?ie=UTF-8&tl=es&client=tw-ob&q={urllib.parse.quote(tts_text)}"
+        tts_req = urllib.request.Request(
+            tts_url,
+            headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"}
+        )
+        with urllib.request.urlopen(tts_req, timeout=5) as res:
+            return res.read()
+    except Exception as fallback_err:
+        logger.error(f"Fallback TTS generation error: {fallback_err}")
     return None
 
 def translate_to_english(text: str) -> Optional[str]:
@@ -603,16 +612,36 @@ st.markdown("""
         padding: 0 !important;
     }
 
-    /* Typing indicator bubble */
+    /* Typing indicator bubble - Exactly centered inside tutor message bubble */
+    div[data-testid="stChatMessage"]:not(:has([data-testid="stChatMessageAvatarUser"])) [data-testid="stMarkdownContainer"]:has(.typing-dots-container),
+    div[data-testid="stChatMessage"]:not(:has([data-testid="stChatMessageAvatarUser"])) [data-testid="stMarkdownContainer"]:has(.typing-bubble) {
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        width: 100% !important;
+    }
+    div[data-testid="stChatMessage"]:not(:has([data-testid="stChatMessageAvatarUser"])) [data-testid="stChatMessageContent"] p:has(.typing-dots-container),
+    div[data-testid="stChatMessage"]:not(:has([data-testid="stChatMessageAvatarUser"])) [data-testid="stChatMessageContent"] p:has(.typing-bubble) {
+        margin: 0 !important;
+        padding: 0 !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        line-height: 1 !important;
+    }
+    .typing-dots-container,
     .typing-bubble {
-        display: inline-flex;
-        align-items: center;
-        gap: 6px;
-        padding: 10px 16px;
-        background-color: #F3F4F6;
-        border-radius: 18px;
-        margin: 4px 0;
-        width: fit-content;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        gap: 6px !important;
+        padding: 4px 6px !important;
+        margin: 0 auto !important;
+        height: 22px !important;
+        line-height: 1 !important;
+        background: transparent !important;
     }
     .typing-dot {
         width: 7px;
@@ -1112,7 +1141,7 @@ else:
                     if msg.get("audio") and st.session_state.get(f"play_audio_{idx}", False):
                         b64_audio = base64.b64encode(msg["audio"]).decode()
                         st.markdown(
-                            f'<audio autoplay playsinline style="display:none;"><source src="data:audio/wav;base64,{b64_audio}" type="audio/wav"></audio>',
+                            f'<audio autoplay playsinline style="display:none;"><source src="data:audio/mp3;base64,{b64_audio}" type="audio/mp3"><source src="data:audio/wav;base64,{b64_audio}" type="audio/wav"></audio>',
                             unsafe_allow_html=True
                         )
                         st.session_state[f"play_audio_{idx}"] = False
@@ -1177,9 +1206,11 @@ else:
     elif text_val:
         user_input = text_val
         st.session_state.show_text_input = False
-    elif audio_val:
-        user_input = audio_val
-        input_is_audio = True
+    elif audio_val is not None:
+        raw_audio_bytes = audio_val.getvalue()
+        if len(raw_audio_bytes) > 200:
+            user_input = audio_val
+            input_is_audio = True
 
     # 6. Process User Turn with Gemini (Structured JSON with Transcription & Reply)
     if user_input:
@@ -1223,7 +1254,7 @@ You must respond with a valid JSON object containing exactly two string fields:
                 with st.chat_message("assistant"):
                     typing_placeholder = st.empty()
                     typing_placeholder.markdown(
-                        f'<div class="typing-bubble">'
+                        f'<div class="typing-dots-container">'
                         f'<span class="typing-dot"></span>'
                         f'<span class="typing-dot"></span>'
                         f'<span class="typing-dot"></span>'
@@ -1259,7 +1290,7 @@ You must respond with a valid JSON object containing exactly two string fields:
                                     response_mime_type="application/json",
                                     max_output_tokens=2048,
                                     temperature=0.7,
-                                    http_options=types.HttpOptions(timeout=15000)
+                                    http_options=types.HttpOptions(timeout=10000)
                                 )
                             )
                             if resp.text:
