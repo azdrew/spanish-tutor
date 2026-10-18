@@ -30,63 +30,75 @@
 
 ### UI Breakdown: Header, Sidebar, & Navigation
 
-#### Header & Status Bar (Praktika Style)
+#### Header & Dynamic Status Bar (Praktika Style)
 
-* **Active Topic Banner:** Displays current level, module, and focus area (e.g., *A2 · Frases Esenciales para Viajar - Intereses: Viajes y Turismo*).
-
-
-* **Action Header Card:** Shows current grammar topic (*Comparación gramatical*) with direct **[Grammar]**, **[Continue]**, and **[Restart]** controls.
-
-
+* **Dynamic Header Auto-Collapse:**
+  * **Onboarding State (<2 user turns):** Full 16:9 hero banner (`assets/gabby-banner.jpg`) right at the top with warm tutor intro.
+  * **Active Conversation State (>=2 user turns):** Hero image smoothly unmounts and is replaced with a slim, single-row status bar (42px avatar + *Gabby · A2 Práctica Diaria*) to reclaim maximum vertical feed height on mobile.
 
 #### Sidebar: Persona & Lesson Settings
 
-* **Persona Grid / Switcher:** Dropdown/selector between **Gabriella "Gabby"** (Default, warm female voice) and **Mateo** (Secondary, patient male voice). Displays avatar image and quick style badge (*Standard*).
-
-
-* **Lesson Settings Modal / Controls:**
-* **Speech Speed:** Slider/Select (`0.8x`, `1.0x`, `1.2x`).
-
-
-* **Text Size:** Selector (`Regular`, `Large`).
-
-
-* **Response Length:** Selector (`Short`, `Normal`, `Detailed`).
-
-
-* **Tutor Feedback Style (Rigor):** Radio buttons mapping directly to system instructions:
-
-
-* **Soft:** Minimal corrections, focuses on flow and encouragement.
-
-
-* **Balanced (Default):** Corrects major errors and vocabulary blockers inline.
-
-
-* **Strict:** Corrects all grammar, preposition usage (*por* vs. *para*), and pronunciation errors (*r* vs. *rr*).
-
-
-
-
-
-
+* **Persona Grid / Switcher:** Dropdown/selector between **Gabriella "Gabby"** (Default, warm female voice: `es-MX-DaliaNeural`) and **Mateo** (Secondary, patient male voice: `es-MX-JorgeNeural`). Displays avatar image and quick style badge.
+* **Lesson Settings Controls:**
+  * **Speech Speed:** Radio buttons (`0.8x`, `1.0x`, `1.2x`), mapped directly to Edge TTS rate modifiers (`-15%`, `+0%`, `+15%`).
+  * **Tutor Feedback Style (Rigor):** Radio buttons mapping directly to system instructions:
+    * **Soft:** Minimal corrections, focuses on flow and encouragement.
+    * **Balanced (Default):** Corrects major errors and vocabulary blockers inline.
+    * **Strict:** Corrects all grammar, preposition usage (*por* vs. *para*), and pronunciation errors (*r* vs. *rr*).
 * **User Dashboard & Progress Metrics:** Displays current streak counter (e.g., 🔥 *9 Days*), active study plan level (*Spanish A2*), and current assigned tutor.
-
-
 
 ---
 
-## 3. Main Interface Tabs (`tutor.py`)
+## 3. Main Interface Architecture (`tutor.py`)
 
-```
-========================================================================================================
-🇪🇸 Spanish Tutor                                                               [ ⚙️ Sidebar / Settings ]
-========================================================================================================
- [ Active Banner: A2 · Frases Esenciales para Viajar - Intereses: Viajes y Turismo ][cite: 1]
- ------------------------------------------------------------------------------------------------------
- |  💬 Practice Session  |  🎴 Flashcard Deck  |
- ------------------------------------------------------------------------------------------------------
+```text
+ ========================================================================
+[ st.set_page_config(layout="centered") ]        [ ⚙️ Sidebar / Settings ]
+========================================================================
 
++----------------------------------------------------------------------+
+|                         DYNAMIC TOP BANNER                           |
+|                                                                      |
+|  STATE A: (user_turns < 2) -> Initial Onboarding                     |
+|  +----------------------------------------------------------------+  |
+|  | [ 🖼️ 16:9 Tutor Banner Image: assets/gabby-banner.jpg ]        |  |
+|  | **Gabby — Tu Tutora de Español**                               |  |
+|  | Warm & encouraging Latin American Spanish practice.            |  |
+|  +----------------------------------------------------------------+  |
+|                                                                      |
+|  STATE B: (user_turns >= 2) -> Auto-Collapsed Slim Status Bar        |
+|  +----------------------------------------------------------------+  |
+|  | [ 👤 42px Avatar ]  **Gabby** · *A2 Práctica Diaria*           |  |
+|  +----------------------------------------------------------------+  |
++----------------------------------------------------------------------+
+|--------------------------- st.divider() -----------------------------|
++----------------------------------------------------------------------+
+|                CONVERSATIONAL CHAT FEED (st.chat_message)            |
+|                                                                      |
+|   +-------------------------------------------------------------+    |
+|   | 👤 User Speech Bubble (Right-aligned violet #7C3AED)        |    |
+|   | "Hola Gabby, ¿cómo estás hoy? Quiero practicar español."     |    |
+|   | [ 🔊 Replay My Voice ]                                      |    |
+|   +-------------------------------------------------------------+    |
+|                                                                      |
+|   +-------------------------------------------------------------+    |
+|   | 👩‍🏫 Gabby Speech Bubble (Left-aligned soft gray #F3F4F6)      |    |
+|   | "¡Hola! Estoy muy bien. ¿Qué hiciste esta mañana?"          |    |
+|   | [ 🔊 Escuchar ]   [ 文A Traducir ]                           |    |
+|   +-------------------------------------------------------------+    |
+|                                                                      |
+|   (While generating response: centered typing pulse [ • • • ])       |
+|                                                                      |
++----------------------------------------------------------------------+
+|                                                                      |
+|               PRAKTIKA VOICE-FIRST FLOATING CONTROLS                 |
+|                                                                      |
+|  +-------------------+       +--------------------+                  |
+|  | [ + ] Toggle Text |       |  ( 🎙️ ) Push-To-Talk|                  |
+|  +-------------------+       +--------------------+                  |
+|  (Fixed Bottom-Left)         (Fixed Bottom-Center)                   |
+|                                                                      |
++----------------------------------------------------------------------+
 ```
 
 ### Tab 1: 💬 Practice Session (Conversation & Audio) — Praktika-Inspired Voice-First
