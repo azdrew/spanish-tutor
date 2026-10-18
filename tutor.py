@@ -243,7 +243,7 @@ def synthesize_speech(text: str, persona_name: str = "Gabby", speed_str: str = "
         headers={"Content-Type": "application/json"}
     )
     try:
-        with urllib.request.urlopen(req, timeout=25) as res:
+        with urllib.request.urlopen(req, timeout=6) as res:
             if res.status == 200:
                 data = json.loads(res.read().decode("utf-8"))
                 for step in data.get("steps", []):
@@ -318,9 +318,10 @@ st.markdown("""
         height: 2.5rem !important;
         z-index: 50 !important;
     }
-    .main .block-container {
+    .main .block-container,
+    [data-testid="stMainBlockContainer"] {
         padding-top: 1.25rem !important;
-        padding-bottom: 8.5rem !important;
+        padding-bottom: 9.5rem !important;
         max-width: 42rem !important;
         margin: 0 auto !important;
         scroll-behavior: smooth !important;
@@ -1140,8 +1141,7 @@ else:
                         )
                         st.session_state[f"play_user_audio_{idx}"] = False
 
-        # Clear anchor so tutor response and action buttons always scroll above the push-to-talk button
-        st.markdown('<div id="chat-bottom-anchor" style="height: 125px; width: 100%; pointer-events: none; margin: 0; padding: 0;"></div>', unsafe_allow_html=True)
+
 
     # 5. Bottom Action Bar: Praktika Voice-First Pattern (No horizontal lines)
     audio_val = None
@@ -1269,8 +1269,6 @@ You must respond with a valid JSON object containing exactly two string fields:
                             last_err = e
                             logger.warning(f"Model {model_cand} generation error: {e}. Trying fallback...")
 
-                    typing_placeholder.empty()
-
                     if raw_response_text:
                         turn_data = extract_turn_json(raw_response_text)
 
@@ -1291,11 +1289,12 @@ You must respond with a valid JSON object containing exactly two string fields:
                                 "audio": None
                             })
 
-                        # Resolve assistant response
+                        # Resolve assistant response and update typing bubble directly to Spanish text
                         assistant_raw_reply = turn_data.get("reply", "").strip() or raw_response_text
                         clean_text = parse_and_save_vocabulary(assistant_raw_reply)
-                        st.markdown(clean_text)
+                        typing_placeholder.markdown(clean_text)
 
+                        # Immediately persist assistant message so response is never lost
                         new_msg = {
                             "role": "assistant",
                             "content": clean_text,
@@ -1303,8 +1302,12 @@ You must respond with a valid JSON object containing exactly two string fields:
                             "audio": None,
                             "show_audio_player": False
                         }
+                        st.session_state.messages.append(new_msg)
+                        new_idx = len(st.session_state.messages) - 1
+
+                        # Generate spoken audio for Gabby
                         if autoplay_voice or input_is_audio:
-                            with st.spinner("🎙️ Gabby está hablando..."):
+                            try:
                                 audio_bytes = synthesize_speech(
                                     clean_text,
                                     persona_name=st.session_state.selected_persona,
@@ -1313,11 +1316,13 @@ You must respond with a valid JSON object containing exactly two string fields:
                                 if audio_bytes:
                                     new_msg["audio"] = audio_bytes
                                     new_msg["show_audio_player"] = True
-                                    new_idx = len(st.session_state.messages)
                                     st.session_state[f"play_audio_{new_idx}"] = True
-                        st.session_state.messages.append(new_msg)
+                            except Exception as tts_err:
+                                logger.warning(f"Audio synthesis error: {tts_err}")
+
                         st.rerun()
                     else:
+                        typing_placeholder.empty()
                         if input_is_audio:
                             user_msg_placeholder.markdown("⚠️ _No se pudo procesar el audio._")
                             st.session_state.audio_turn_count += 1
