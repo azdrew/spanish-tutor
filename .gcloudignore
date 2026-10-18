@@ -1,0 +1,7 @@
+.venv/
+venv/
+.env
+firebase-key.json
+__pycache__/
+.git/
+.streamlit/

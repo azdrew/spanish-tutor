@@ -76,35 +76,58 @@ config = AppConfig()
 # Secrets & Credentials Resolution Layer
 # -----------------------------------------------------------------------------
 def get_secret(key: str, default: Optional[str] = None) -> Optional[str]:
-    """Retrieve secret from Streamlit secrets (Cloud) or OS environment (Local)."""
-    if hasattr(st, "secrets") and key in st.secrets:
-        return st.secrets[key]
-    return os.getenv(key, default)
+    """Retrieve secret from OS environment (Cloud Run / Local) or Streamlit secrets safely."""
+    # 1. Check OS environment first (Cloud Run environment variables / local .env)
+    env_val = os.getenv(key)
+    if env_val:
+        return env_val
+
+    # 2. Safely attempt Streamlit secrets (Cloud) without raising StreamlitSecretNotFoundError
+    try:
+        if hasattr(st, "secrets") and key in st.secrets:
+            return st.secrets[key]
+    except Exception as e:
+        logger.debug(f"Could not read key '{key}' from st.secrets: {e}")
+
+    # 3. Fall back to default
+    return default
 
 GEMINI_API_KEY = get_secret("GEMINI_API_KEY")
 PEXELS_API_KEY = get_secret("PEXELS_API_KEY")
 
 @st.cache_resource
 def get_firestore_client() -> Optional[firestore.Client]:
-    """Initialize cached Firestore client from st.secrets (Cloud) or firebase-key.json (Local)."""
+    """Initialize cached Firestore client supporting local key, Streamlit secrets, and Cloud Run native IAM."""
     try:
-        # Check Streamlit Cloud Secrets first
-        if hasattr(st, "secrets") and "firebase_service_account" in st.secrets:
-            key_dict = dict(st.secrets["firebase_service_account"])
-            if "private_key" in key_dict and "\\n" in key_dict["private_key"]:
-                key_dict["private_key"] = key_dict["private_key"].replace("\\n", "\n")
-            cred = service_account.Credentials.from_service_account_info(key_dict)
-            return firestore.Client(credentials=cred, project=key_dict.get("project_id"))
-        
-        # Local firebase-key.json fallback
+        # 1. Local development fallback (firebase-key.json)
         local_key = Path(__file__).resolve().parent / "firebase-key.json"
         if local_key.exists():
             cred = service_account.Credentials.from_service_account_file(str(local_key))
             return firestore.Client(credentials=cred)
+
+        # 2. Streamlit Cloud Secrets (wrapped safely in try/except)
+        try:
+            secrets_account = None
+            if hasattr(st, "secrets"):
+                if "firebase" in st.secrets:
+                    secrets_account = dict(st.secrets["firebase"])
+                elif "firebase_service_account" in st.secrets:
+                    secrets_account = dict(st.secrets["firebase_service_account"])
+            
+            if secrets_account:
+                if "private_key" in secrets_account and "\\n" in secrets_account["private_key"]:
+                    secrets_account["private_key"] = secrets_account["private_key"].replace("\\n", "\n")
+                cred = service_account.Credentials.from_service_account_info(secrets_account)
+                return firestore.Client(credentials=cred, project=secrets_account.get("project_id"))
+        except Exception as secrets_err:
+            logger.debug(f"Streamlit secrets not available for Firestore: {secrets_err}")
+
+        # 3. Cloud Run Native IAM / Application Default Credentials (ADC)
+        project_id = os.getenv("GOOGLE_CLOUD_PROJECT", "spanish-tutor-e7616")
+        return firestore.Client(project=project_id)
     except Exception as e:
         logger.error(f"Firestore initialization error: {e}")
         return None
-    return None
 
 @st.cache_resource
 def get_gemini_client() -> Optional[genai.Client]:
