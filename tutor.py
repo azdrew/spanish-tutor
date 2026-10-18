@@ -11,8 +11,15 @@ import urllib.request
 import urllib.parse
 import threading
 import datetime
+import asyncio
 from pathlib import Path
 from typing import Optional, Dict, Any
+
+try:
+    import edge_tts
+    HAS_EDGE_TTS = True
+except ImportError:
+    HAS_EDGE_TTS = False
 
 # UI & State
 import streamlit as st
@@ -192,64 +199,46 @@ def extract_turn_json(raw_text: str) -> dict:
     return {"transcription": "", "reply": raw_text}
 
 def synthesize_speech(text: str, persona_name: str = "Gabby", speed_str: str = "1.0x") -> Optional[bytes]:
-    """Generate spoken audio for tutor response using Gemini 3.8 Flash-Lite TTS with fast Google TTS fallback."""
+    """Generate spoken audio for tutor response with unlimited high-fidelity Edge Neural TTS, falling back to Google TTS."""
     clean = re.sub(r"\[.*?\]", "", text)
     clean = re.sub(r"[*_#`~]", "", clean).strip()
     if not clean:
         return None
 
-    # 1. Try Gemini 3.8 Flash-Lite TTS first if GEMINI_API_KEY is available
-    if GEMINI_API_KEY:
-        voice_name = "Kore" if persona_name.lower().startswith("gabb") else "Puck"
-        if "0.8" in speed_str:
-            style_desc = "clear and deliberate Latin American Spanish tutor speaking slowly and clearly"
-        elif "1.2" in speed_str:
-            style_desc = "fluent and lively Latin American Spanish tutor speaking at an energetic pace"
-        else:
-            style_desc = "warm, friendly, and natural Latin American Spanish tutor speaking conversationally"
+    # Calculate speech rate modifier for Edge TTS
+    if "0.8" in speed_str:
+        edge_rate = "-15%"
+    elif "1.2" in speed_str:
+        edge_rate = "+15%"
+    else:
+        edge_rate = "+0%"
 
-        url = f"https://generativelanguage.googleapis.com/v1beta/interactions?key={GEMINI_API_KEY}"
-        payload = {
-            "model": "gemini-3.8-flash-lite-tts",
-            "input": [{
-                "type": "user_input",
-                "content": [{
-                    "type": "text",
-                    "text": clean,
-                    "annotations": [{
-                        "type": "speech_metadata",
-                        "style": style_desc
-                    }]
-                }]
-            }],
-            "response_format": {
-                "type": "audio",
-                "mime_type": "audio/wav"
-            },
-            "generation_config": {
-                "speech_config": [
-                    {"voice": voice_name}
-                ]
-            }
-        }
+    # Select high-fidelity neural voice based on persona
+    is_male = any(m in persona_name.lower() for m in ["mateo", "carlos", "diego", "javier", "puck"])
+    edge_voice = "es-MX-JorgeNeural" if is_male else "es-MX-DaliaNeural"
 
+    # 1. Primary Engine: Microsoft Edge Neural TTS (100% Free, Zero Quota Limits, Human-like Spanish)
+    if HAS_EDGE_TTS:
         try:
-            req = urllib.request.Request(
-                url,
-                data=json.dumps(payload).encode("utf-8"),
-                headers={"Content-Type": "application/json"}
-            )
-            with urllib.request.urlopen(req, timeout=5) as res:
-                if res.status == 200:
-                    data = json.loads(res.read().decode("utf-8"))
-                    for step in data.get("steps", []):
-                        for item in step.get("content", []):
-                            if item.get("type") == "audio" and "data" in item:
-                                return base64.b64decode(item["data"])
-        except Exception as e:
-            logger.warning(f"Gemini TTS unavailable ({e}). Using fast audio fallback...")
+            async def _synth():
+                communicate = edge_tts.Communicate(clean, edge_voice, rate=edge_rate)
+                audio_data = bytearray()
+                async for chunk in communicate.stream():
+                    if chunk["type"] == "audio":
+                        audio_data.extend(chunk["data"])
+                return bytes(audio_data)
 
-    # 2. Fast Reliable Fallback: Google Translate TTS (0.4s latency, 100% quota-free)
+            loop = asyncio.new_event_loop()
+            try:
+                audio_bytes = loop.run_until_complete(_synth())
+                if audio_bytes and len(audio_bytes) > 500:
+                    return audio_bytes
+            finally:
+                loop.close()
+        except Exception as edge_err:
+            logger.warning(f"Edge TTS error ({edge_err}). Falling back to Google TTS...")
+
+    # 2. Fast Reliable Fallback: Google Translate TTS (0.3s latency, 100% quota-free)
     try:
         tts_text = clean[:300]
         tts_url = f"https://translate.google.com/translate_tts?ie=UTF-8&tl=es&client=tw-ob&q={urllib.parse.quote(tts_text)}"
